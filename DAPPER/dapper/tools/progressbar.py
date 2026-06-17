@@ -1,0 +1,172 @@
+"""Make `progbar` (wrapper around `tqdm`) and `read1`."""
+
+import inspect
+import os
+import select
+import sys
+import warnings
+
+from tqdm.auto import tqdm
+
+# In case stdin or term settings isn't supported, for ex. w/ pytest or multiprocessing.
+disable_progbar = "pytest" in sys.modules
+disable_user_interaction = "pytest" in sys.modules
+
+
+def _interaction_impossible():
+    from dapper.dpr_config import rc
+
+    if rc.liveplotting and "pytest" not in sys.modules:
+        warnings.warn(
+            (
+                "Keyboard interaction (to skip/stop/pause the liveplotting)"
+                " does not work in the current python frontend."
+                " To disable liveplotting (and silence this message), set"
+                " `dapper.rc.liveplotting = False` or the env var"
+                " `DAPPER_LIVEPLOTTING=false`."
+            ),
+            stacklevel=2,
+        )
+    global disable_user_interaction
+    disable_user_interaction = True
+
+
+def pdesc(desc):
+    """Get progbar description by introspection."""
+    if desc is not None:
+        return desc
+
+    stack = inspect.stack()
+    # Gives FULL REPR:
+    # stack[4].frame.f_locals['name_hook']
+
+    # Go look above in the stack for a name_hook.
+    for level in range(2, 6):
+        try:
+            locals_ = stack[level].frame.f_locals
+        except IndexError:
+            pass
+        else:
+            if "pb_name_hook" in locals_:
+                name = locals_["pb_name_hook"]
+                break
+    else:
+        # Otherwise: just get name of what's
+        # calling progbar (i.e. stack[2])
+        name = stack[2].function
+
+    return name
+
+
+def progbar(iterable, desc=None, leave: bool = True, **kwargs):  # pyright: ignore[reportRedeclaration]
+    """Prints a nice progress bar in the terminal"""
+    if disable_progbar:
+        return iterable
+    else:
+        desc = pdesc(desc)
+        return tqdm(
+            iterable,
+            desc=desc,
+            leave=leave,
+            smoothing=0.3,
+            dynamic_ncols=True,
+            **kwargs,
+        )
+        # Printing during the progbar loop (may occur with error printing)
+        # can cause tqdm to freeze the entire execution.
+        # Seemingly, this is caused by their multiprocessing-safe stuff.
+        # Disable this, as per github.com/tqdm/tqdm/issues/461#issuecomment-334343230
+        # pb = tqdm.tqdm(...)
+        # try: pb.get_lock().locks = []
+        # except AttributeError: pass
+        # return pb
+
+
+#########################################
+# Make read1()
+#########################################
+# Non-blocking, non-echo read1 from stdin.
+try:
+    # Linux. See Misc/read1_trials.py
+    import termios
+
+    def set_term_settings(TS):
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, TS)
+
+    def new_term_settings():
+        """Make stdin.read non-echo and non-block"""
+        # NB: This makes ipython quit (by pressing C^D twice) hang!
+        #     So it should be undone before returning to prompt.
+        #     Thus, setting/restoring at import/atexit is not viable.
+
+        TS_old = termios.tcgetattr(sys.stdin)
+        TS_new = termios.tcgetattr(sys.stdin)
+
+        # Make tty non-echo.
+        TS_new[3] = TS_new[3] & ~(termios.ECHO | termios.ICANON)
+
+        set_term_settings(TS_new)
+        return TS_old
+
+    try:
+        # Test set/restore settings
+        TS_old = new_term_settings()
+        set_term_settings(TS_old)
+
+        orig_progbar = progbar
+
+        # Wrap the progressbar generator so as to temporarily set term settings.
+        # Alternative solution: set/restore term settings in assimilate()
+        # of the da_method decorator. But that gets bloated, and anyways the logic
+        # of user-control of liveplots kindof belongs together with a progressbar.
+        def progbar(iterable, desc=None, leave: bool = True, **kwargs):
+            TS_old = None
+            if not disable_user_interaction:
+                TS_old = new_term_settings()
+            try:
+                yield from orig_progbar(iterable, desc, leave, **kwargs)
+            except GeneratorExit:
+                # Allows code below to run even if caller raised exception
+                # NB: Fails if caller is in a list-comprehesion! Why?
+                pass
+            # Restore both for normal termination or exception (propagates).
+            if TS_old is not None:
+                set_term_settings(TS_old)
+
+        def kbhit():
+            a = select.select([sys.stdin], [], [], 0)
+            b = ([sys.stdin], [], [])
+            return a == b
+
+        def getch():
+            return os.read(sys.stdin.fileno(), 1)
+
+        def _read1():  # pyright: ignore[reportRedeclaration]
+            if kbhit():
+                return getch()
+            else:
+                return None
+
+    except:  # noqa
+        _interaction_impossible()
+
+except ImportError:
+    # Windows
+    try:
+        import msvcrt  # noqa
+
+        def _read1():  # pyright: ignore[reportRedeclaration]
+            if msvcrt.kbhit():  # ty: ignore[unresolved-attribute]
+                return msvcrt.getch()  # ty: ignore[unresolved-attribute]
+            else:
+                return None
+
+    except ImportError:
+        _interaction_impossible()
+
+
+def read1():
+    """Get 1 character. Non-blocking, non-echoing."""
+    if disable_user_interaction:
+        return None
+    return _read1()
