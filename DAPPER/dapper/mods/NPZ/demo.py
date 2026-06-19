@@ -12,7 +12,7 @@ simulator = modelling.with_recursion(step, prog="Simulating")
 
 # Simulation de 1000 pas de temps
 dt = 0.1
-xx = simulator(x0, k=1000, t0=0, dt=dt)
+xx = simulator(x0, k=2000, t0=0, dt=dt)
 
 # Affichage des résultats
 plt.figure(figsize=(10, 6))

@@ -24,7 +24,7 @@ class KETKF(da_method):
     poly_degree: int = 2     # Degré du noyau polynomial
     sigma_rbf: float = 1.0   # Pour les noyaux basés sur la distance
     c_tanh: float = 1.0      # Pour le tanh
-    reg_tikhonov: float = 1e-3
+    reg_tikhonov: float = 1e-15
 
     def phi_poincare(self, X):
         coef = sqrt(self.c_tanh) * np.linalg.norm(X, axis=1, keepdims=True)
@@ -166,7 +166,27 @@ class KETKF(da_method):
 
             # matrice de covariance de l'erreur d'observation R
             R = Obs_op.noise.C.full
+
+            # inflation adaptative ---
+            # innovation
+            d = y - mu_f_obs
             
+            d_var = np.sum(d**2)           # Erreur totale constatée dans la vraie vie
+            R_var = np.trace(R)            # Erreur théorique attendue du satellite
+            
+            # Variance de l'ensemble dans l'espace des observations
+            P_obs_var = np.trace((Y_f @ Y_f.T) / (self.N - 1)) 
+            
+            ratio = (d_var - R_var) / (P_obs_var + 1e-8)
+            
+            if ratio > 1.0:
+                lambda_infl = sqrt(ratio)
+            else:
+                lambda_infl = 1.0
+                
+            lambda_infl = np.clip(lambda_infl, 1.0, 1.02)
+            # ----
+
             # Décomposition en valeurs propres de R
             val_p, vec_p = sla.eigh(R)
             valeurs_propres_inv_racine = 1.0 / np.sqrt(val_p)
@@ -238,6 +258,7 @@ class KETKF(da_method):
                 E = mu_a + R_X_resampled.T
 
             # inflation pour éviter les ensemble collapse
-            E = inflate_ens(E, self.infl)
+            #E = inflate_ens(E, self.infl)
+            E = inflate_ens(E, lambda_infl)
                 
             self.stats.assess(k, kObs, 'a', E=E)
