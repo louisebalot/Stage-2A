@@ -24,6 +24,7 @@ class KETKF(da_method):
     poly_degree: int = 2     # Degré du noyau polynomial
     sigma_rbf: float = 1.0   # Pour les noyaux basés sur la distance
     c_tanh: float = 1.0      # Pour le tanh
+    reg_tikhonov: float = 1e-3
 
     def phi_poincare(self, X):
         coef = sqrt(self.c_tanh) * np.linalg.norm(X, axis=1, keepdims=True)
@@ -187,12 +188,9 @@ class KETKF(da_method):
 
             # alpha*H
             M_inv = (self.N - 1) * eye(p) + K_H
-            alpha_H = sla.solve(M_inv, e_d_tilde)
-
-            # régularisation pour le Lorenz-96
-            # epsilon = 0.05  
-            # M_reg = M_inv + epsilon * np.eye(M_inv.shape[0])
-            # alpha_H = sla.solve(M_reg, e_d_tilde)
+            M_reg = M_inv + self.reg_tikhonov * eye(p)
+            alpha_H = sla.solve(M_reg, e_d_tilde)
+            #alpha_H = sla.solve(M_inv, e_d_tilde)
             
             # moyenne physique (taille n)
             mu_a = mu_f + K_XH @ alpha_H
@@ -203,14 +201,14 @@ class KETKF(da_method):
             # on force les valeurs propres à être >= 0
             valP_K_H = np.clip(valP_K_H, 0, None)
 
-            diag_inv = diag(1.0 / ((self.N - 1) + valP_K_H))
+            diag_inv = diag(1.0 / ((self.N - 1) + valP_K_H + self.reg_tikhonov))
             terme_central = U_H @ diag_inv @ U_H.T
             
             # Covariance analysée physique
             Pa_X = (1.0 / (self.N - 1)) * (K_X - K_XH @ terme_central @ K_XH.T)
 
             # sécurité 
-            Pa_X = Pa_X + 1e-6 * eye(n)
+            Pa_X = Pa_X + self.reg_tikhonov * eye(n)
             
             # Décomposition en valeurs propres de Pa_X
             valP_Pa_X, U_Pa = sla.eigh(Pa_X)
