@@ -6,7 +6,6 @@ from dapper.mods.NPZ.settings_1 import HMM
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-print("Génération de la vérité et des observations...")
 xx, yy = HMM.simulate()
 
 enkf = EnKF('Sqrt', N=30, infl=1.01, rot=True)
