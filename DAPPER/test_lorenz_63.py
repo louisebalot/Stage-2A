@@ -11,17 +11,23 @@ print("Génération de la vérité et des observations")
 xx, yy = HMM.simulate()
 
 # Pour lancer en liste
-
+N = 10
 xps = dpr.xpList()
 
-#xps += EnKF('Sqrt', N=10, infl=1.02, rot=True)
-#xps += EnKF('PertObs', N=40, infl=1.06)
+xps += EnKF('Sqrt', N=N, infl=1.02, rot=True)
+xps += KETKF(N=N, infl=1.02, rot=True, kernel_type='linear')
 
-xps += KETKF(N=10, infl=1.02, rot=True, kernel_type ='linear')
-#xps += KETKF(N=20, infl=1.02, rot=True, kernel_type='rbf', sigma_rbf=10)
-#xps += KETKF(N=20, infl=1.02, rot=True, kernel_type='hyperbolique', c_tanh=0.01)
-for s in [0.1, 1.0, 5.0, 20.0]:
-    xps += KETKF(N=20, infl=1.02, rot=True, kernel_type='rbf', sigma_rbf=s)
+# tests
+xps += KETKF(N=N, infl=1.01, rot=True, kernel_type='sigmoid', c_tanh=0.01 , reg_tikhonov=1e-3)
+
+xps += KETKF(N=N, infl=1.01, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-3)
+
+xps += KETKF(N=N, infl=1.01, rot=True, kernel_type='polynomial', poly_degree=1, reg_tikhonov=1e-2)
+xps += KETKF(N=N, infl=1.01, rot=True, kernel_type='polynomial', poly_degree=2, reg_tikhonov=1e-2)
+
+xps += KETKF(N=N, infl=1.01, rot=True, kernel_type='rbf_exp', sigma_rbf=0.25, reg_tikhonov=1e-3)
+
+xps += KETKF(N=N, infl=1.01, rot=True, kernel_type='rbf', sigma_rbf=0.5, reg_tikhonov=1e-3)
 
 xps.launch(HMM, liveplots=False)
 
