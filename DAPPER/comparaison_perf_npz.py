@@ -9,10 +9,10 @@ from contextlib import redirect_stdout
 import dapper.tools.progressbar as pb
 pb.disable_progbar = True
 
-n_simulations = 5
+n_simulations = 2
 results_list = []
 
-N = 20
+N = 15
 infl = 1.04
 
 def creer_filtres():
@@ -51,9 +51,7 @@ for k in range(n_simulations):
         xps[-1].name = nom
 
         t0 = time.time()
-        with open(os.devnull, 'w') as f_null, redirect_stdout(f_null):
-            xps.launch(HMM, liveplots=False)
-        # xps.launch(HMM, liveplots=False, save_as=False)
+        xps.launch(HMM, liveplots=False, save_as=False)
         t1 = time.time()
 
         xp = xps[0]
