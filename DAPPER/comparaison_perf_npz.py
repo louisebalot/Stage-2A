@@ -9,10 +9,10 @@ from contextlib import redirect_stdout
 import dapper.tools.progressbar as pb
 pb.disable_progbar = True
 
-n_simulations = 2
+n_simulations = 10
 results_list = []
 
-N = 15
+N = 20
 infl = 1.04
 
 def creer_filtres():

@@ -5,13 +5,16 @@ from dapper.da_methods import EnKF, KETKF
 from dapper.mods.NPZ.settings_1 import HMM
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import dapper.tools.progressbar as pb
+pb.disable_progbar = True
 
 xx, yy = HMM.simulate()
 
-enkf = EnKF('Sqrt', N=30, infl=1.01, rot=True)
-ketkf_lin = KETKF(N=30, kernel_type='linear', infl=1.02, rot=True, reg_tikhonov=1e-10)
-ketkf_hyp  = KETKF(N=30, infl=1.01, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-3)
-ketkf_sig = KETKF(N=30, infl=1.01, rot=True, kernel_type='sigmoid', c_tanh=0.01 , reg_tikhonov=1e-3)
+N = 30
+enkf = EnKF('Sqrt', N=N, infl=1.04, rot=True)
+ketkf_lin = KETKF(N=N, kernel_type='linear', infl=1.01, rot=True, reg_tikhonov=1e-10)
+ketkf_hyp  = KETKF(N=N, infl=1.02, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-3)
+ketkf_sig = KETKF(N=N, infl=1.02, rot=True, kernel_type='sigmoid', c_tanh=0.01 , reg_tikhonov=1e-3)
 
 enkf.assimilate(HMM, xx, yy, liveplots=False)
 ketkf_lin.assimilate(HMM, xx, yy, liveplots=False)

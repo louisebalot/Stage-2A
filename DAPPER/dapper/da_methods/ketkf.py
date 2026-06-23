@@ -180,11 +180,11 @@ class KETKF(da_method):
             ratio = (d_var - R_var) / (P_obs_var + 1e-8)
             
             if ratio > 1.0:
-                lambda_infl = sqrt(ratio)
+                lambda_infl = sqrt(ratio)  # racine car on compare des variances, et infl est ecart-type
             else:
                 lambda_infl = 1.0
                 
-            lambda_infl = np.clip(lambda_infl, 1.0, 1.02)
+            lambda_infl = np.clip(lambda_infl, 1.0, self.infl)
             # ----
 
             # Décomposition en valeurs propres de R
