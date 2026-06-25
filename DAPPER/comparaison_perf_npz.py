@@ -12,7 +12,7 @@ pb.disable_progbar = True
 n_simulations = 10
 results_list = []
 
-N = 20
+N = 30
 infl = 1.04
 
 def creer_filtres():

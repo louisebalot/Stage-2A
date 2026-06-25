@@ -39,8 +39,15 @@ class KETKF(da_method):
     def compute_kernel(self, X, Y):
         """
         Calcule la matrice de Gram selon le kernel_type choisi
-        """
-        # (le noyau linéaire revient à faire un EnKF classique,)
+        """        
+        sigma_rbf = self.sigma_rbf
+
+        # sigma_rbf adaptatif
+        """pairwise_dists = cdist(X, Y)
+        sigma_rbf = np.sqrt(0.5 * np.median(pairwise_dists**2))
+        sigma_rbf = np.clip(sigma_rbf, 0.1, 10.0)"""
+        
+        # (le noyau linéaire revient à faire un EnKF classique)
         if self.kernel_type == 'linear':
             return X @ Y.T
         
@@ -53,12 +60,14 @@ class KETKF(da_method):
             return np.tanh(self.c_tanh * prod)
         
         elif self.kernel_type == 'rbf':
-            dist_squared = cdist(X, Y, metric='sqeuclidean')
-            return np.exp(-dist_squared / (2.0 * self.sigma_rbf**2))
+            dist2 = cdist(X, Y, 'sqeuclidean')
+            dist2 = np.clip(dist2, 0, 1e6)
+            K = np.exp(-dist2 / (2.0 * sigma_rbf**2))
+            return K + 1e-4 * eye(K.shape[0])
         
         elif self.kernel_type == 'rbf_exp':
             dist = cdist(X, Y, metric='euclidean')
-            return np.exp(-dist / self.sigma_rbf)
+            return np.exp(-dist / sigma_rbf)
         
         elif self.kernel_type == 'hyperbolique':
             return self.phi_poincare(X) @ self.phi_poincare(Y).T
@@ -138,7 +147,7 @@ class KETKF(da_method):
         # Tirage de l'ensemble initial a priori
         E = HMM.X0.sample(self.N)
         
-        # Dimension physique
+        # Dimension modèle
         n = E.shape[1]
 
         self.stats.assess(0, E=E)
@@ -200,9 +209,10 @@ class KETKF(da_method):
             # Construction de l'État Augmenté (n+p variables, N membres)
             Z = np.vstack((X_f, Y_tilde))
             
+            Z = Z - Z.mean(axis=1, keepdims=True)
             K = self.compute_kernel(Z, Z)
             
-            K_X  = K[:n, :n]      # Bloc purement physique (n x n)
+            K_X  = K[:n, :n]      # Bloc purement modèle (n x n)
             K_H  = K[n:, n:]      # Bloc purement observé (p x p)
             K_XH = K[:n, n:]      # Bloc croisé (n x p)
 
@@ -212,13 +222,13 @@ class KETKF(da_method):
             alpha_H = sla.solve(M_reg, e_d_tilde)
             #alpha_H = sla.solve(M_inv, e_d_tilde)
             
-            # moyenne physique (taille n)
+            # moyenne modèle (taille n)
             mu_a = mu_f + K_XH @ alpha_H
             
             # Décomposition en valeurs propres de K_H (symétrique)
             valP_K_H, U_H = sla.eigh(K_H)
             
-            # on force les valeurs propres à être >= 0
+            # on force les valeurs propres à être >= 0 (gram definie >=0)
             valP_K_H = np.clip(valP_K_H, 0, None)
 
             diag_inv = diag(1.0 / ((self.N - 1) + valP_K_H + self.reg_tikhonov))

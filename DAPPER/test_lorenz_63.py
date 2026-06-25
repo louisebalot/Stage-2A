@@ -12,7 +12,7 @@ HMM = L63.HMM
 xx, yy = HMM.simulate()
 
 # Pour lancer en liste
-N = 30
+N = 3
 xps = dpr.xpList()
 
 xps += EnKF('Sqrt', N=N, infl=1.01, rot=True)

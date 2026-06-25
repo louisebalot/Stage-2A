@@ -24,10 +24,3 @@ jj = [1]
 Obs = modelling.Operator(**modelling.partial_Id_Obs(Nx, jj), noise=0.01)
 
 HMM = modelling.HiddenMarkovModel(Dyn, Obs, tseq, X0)
-
-####################
-# Suggested tuning 
-####################
-# xps += EnKF('Sqrt', N=10, infl=1.02, rot=True)       # RMSE = ?
-# xps += KETKF(N=10, kernel='linear')                  # RMSE = ?
-# xps += KETKF(N=20, kernel='rbf', sigma=10)           # RMSE = ?
