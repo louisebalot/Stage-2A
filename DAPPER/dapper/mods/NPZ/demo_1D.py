@@ -10,6 +10,7 @@ k_steps = 2000
 xx_1D = np.zeros((k_steps, 3 * M))
 xx_1D[0] = x0_1D
 
+# boucle temporelle simu
 for k in range(k_steps - 1):
     t = k * dt
     xx_1D[k+1] = step_1D(xx_1D[k], t, dt, M, D)
@@ -18,6 +19,7 @@ N_data = xx_1D[:, 0:M].T       # Les M premières colonnes
 P_data = xx_1D[:, M:2*M].T     # Les M colonnes du milieu
 Z_data = xx_1D[:, 2*M:3*M].T   # Les M dernières colonnes
 
+# même échelle de profondeur
 fig, axes = plt.subplots(1, 3, figsize=(18, 6), sharey=True)
 
 # Nutriments (Bleu)
