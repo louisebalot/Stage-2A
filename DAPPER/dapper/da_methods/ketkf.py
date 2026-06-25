@@ -42,11 +42,6 @@ class KETKF(da_method):
         """        
         sigma_rbf = self.sigma_rbf
 
-        # sigma_rbf adaptatif
-        """pairwise_dists = cdist(X, Y)
-        sigma_rbf = np.sqrt(0.5 * np.median(pairwise_dists**2))
-        sigma_rbf = np.clip(sigma_rbf, 0.1, 10.0)"""
-        
         # (le noyau linéaire revient à faire un EnKF classique)
         if self.kernel_type == 'linear':
             return X @ Y.T
@@ -59,22 +54,48 @@ class KETKF(da_method):
             prod = X @ Y.T
             return np.tanh(self.c_tanh * prod)
         
-        elif self.kernel_type == 'rbf':
-            dist2 = cdist(X, Y, 'sqeuclidean')
-            dist2 = np.clip(dist2, 0, 1e6)
-            K = np.exp(-dist2 / (2.0 * sigma_rbf**2))
-            return K + 1e-4 * eye(K.shape[0])
-        
-        elif self.kernel_type == 'rbf_exp':
-            dist = cdist(X, Y, metric='euclidean')
-            return np.exp(-dist / sigma_rbf)
-        
         elif self.kernel_type == 'hyperbolique':
             return self.phi_poincare(X) @ self.phi_poincare(Y).T
         
-        else :
-            raise ValueError("Le noyau doit être kernel_type = 'linear', 'polynomial', 'sigmoid', 'rbf', 'rbf_exp' ou 'hyperbolique'")
-    
+        else:  # scaler 
+            std_X = np.std(X, axis=0, keepdims=True) + 1e-8
+            X_s = (X - np.mean(X, axis=0, keepdims=True)) / std_X
+            Y_s = (Y - np.mean(Y, axis=0, keepdims=True)) / std_X
+            
+            if self.kernel_type == 'rbf':
+                dist2 = cdist(X_s, Y_s, 'sqeuclidean')
+                dist2 = np.clip(dist2, 0, 1e6)
+                K = np.exp(-dist2 / (2.0 * sigma_rbf**2))
+                return K + 1e-4 * eye(K.shape[0])
+            
+            elif self.kernel_type == 'rbf_exp':
+                dist = cdist(X_s, Y_s, metric='euclidean')
+                return np.exp(-dist / sigma_rbf)
+            
+            elif self.kernel_type == 'lap':
+                sigma_cos = 1.0 / np.sqrt(self.N - 1)
+                
+                K_lin_brut = X @ Y.T
+                
+                norm_Xs = np.linalg.norm(X_s, axis=1, keepdims=True)
+                norm_Ys = np.linalg.norm(Y_s, axis=1, keepdims=True)
+                
+                norm_Xs_safe = np.maximum(norm_Xs, 1e-12)
+                norm_Ys_safe = np.maximum(norm_Ys, 1e-12)
+                
+                K_lin_scaled = X_s @ Y_s.T 
+                cos_sim = K_lin_scaled / (norm_Xs_safe @ norm_Ys_safe.T)
+                
+                K_exp_cos = np.exp(-sigma_cos * (1.0 - cos_sim**2))
+                
+                mask = (norm_Xs < 1e-12) | (norm_Ys.T < 1e-12)
+                K_exp_cos[mask] = 0.0
+                
+                return K_lin_brut * K_exp_cos
+            
+            else :
+                raise ValueError("Le noyau doit être 'linear', 'polynomial', 'sigmoid', 'hyperbolique', 'rbf', 'rbf_exp' ou 'lap'")
+
     
     def rotation_farchi_bocquet(self, R_X, r_Sigma):
         """
@@ -97,9 +118,13 @@ class KETKF(da_method):
             theta = sqrt(q)/(sqrt(q)-eps)
             #Q_eps = - theta/q * matrice_pattern(q, theta)
             Q_eps = matrice_pattern(q, theta)
+
+            A_rand = np.random.randn(q, q)
+            Q_rand, _ = sla.qr(A_rand, mode='economic')
             zeros_col = zeros((n, 1))
             W = np.hstack([zeros_col, RX])
-            RX = W @ Q_eps
+
+            RX = W @ Q_eps @ Q_rand
         
         return RX
     
@@ -161,9 +186,12 @@ class KETKF(da_method):
                 continue
                 
             # observation
-            y = yy[kObs]
+            y = yy[kObs] 
+            if np.ndim(y) == 0:
+                y = np.array([y])
             p = len(y)
             Obs_op = HMM.Obs(t)
+            
             # projection de l'ensemble de prévision dans l'espace observé
             E_obs = Obs_op(E)
             

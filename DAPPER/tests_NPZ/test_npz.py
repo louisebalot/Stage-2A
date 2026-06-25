@@ -1,10 +1,12 @@
 import dapper as dpr
+import numpy as np
 from dapper.mods.NPZ.settings_1 import HMM
 from dapper.da_methods import EnKF, KETKF
 import dapper.tools.progressbar as pb
 pb.disable_progbar = True
 
 xx, yy = HMM.simulate()
+yy = np.maximum(yy, 1e-8)
 
 xps = dpr.xpList()
 

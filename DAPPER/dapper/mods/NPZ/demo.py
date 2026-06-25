@@ -1,7 +1,3 @@
-"""
-Démonstration de la dynamique du modèle NPZ (sans assimilation).
-"""
-
 import numpy as np
 from matplotlib import pyplot as plt
 
