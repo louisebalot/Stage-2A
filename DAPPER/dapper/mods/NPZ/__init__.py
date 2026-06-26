@@ -2,21 +2,21 @@ import numpy as np
 import dapper.mods as modelling
 
 # constantes
-mu_max = 1.0
-K_N = 0.5
-g_max = 2.0
-K_P = 0.5
-m_P = 0.1
-m_Z = 0.2
-beta = 0.6
-gamma_Z = 0.1
+mu_max = 0.9        # taux croissance max phytoplancton
+K_N = 0.8           # gradualité de la croissance des nutriments
+g_max = 1.8         # taux broutage max zooplancton
+K_P = 0.8           # influence prédation pour phytoplancton
+m_P = 0.1           # taux mortalité linéaire phytoplancton
+m_Z = 0.2           # taux mortalité linéaire zooplancton
+beta = 0.6          # efficacité assimilation zooplancton (transformé en biomasse)
+gamma_Z = 0.1       # taux excretion, recyclage nutriments par zooplancton
 
 # État initial [N, P, Z]
 x0 = np.array([2.0, 0.5, 0.1])
 
 ## réglages 1D 
-M = 10             # Nombre de couches
-depth = 50         # Profondeur totale (m)
+M = 50              # Nombre de couches
+depth = 50          # Profondeur totale (m)
 dz = depth / M      # épaisseur couche
 Kz = 0.7            # coefficient de diffusion verticale
 k_ext = 0.03        # Coefficient d'atténuation de la lumière
