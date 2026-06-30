@@ -1,11 +1,13 @@
 import numpy as np
 from functools import partial
 import dapper.mods as modelling
-from dapper.mods.NPZ import step_1D, x0_1D, M, D
+from dapper.mods.NPZ import step_1D, x0_1D, M, D, dz, Kz
 
 Nx = 3 * M
 
-step_1D_assimil = partial(step_1D, M=M, D=D)
+#step_1D_assimil = partial(step_1D, M=M, D=D)
+step_1D_assimil = partial(step_1D, M=M, dz=dz, Kz=Kz)
+
 Dyn = modelling.Operator(M=Nx, model=step_1D_assimil, noise=0)
 
 jj_satellite = [M] 

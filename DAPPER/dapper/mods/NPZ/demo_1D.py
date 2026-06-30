@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 import dapper.mods as modelling
-from dapper.mods.NPZ import step_1D, x0_1D, M, D, depth       
+from dapper.mods.NPZ import step_1D, x0_1D, M, D, depth, dz, Kz    
 
 # Simulation
 dt = 0.1
@@ -13,7 +13,8 @@ xx_1D[0] = x0_1D
 # boucle temporelle simu
 for k in range(k_steps - 1):
     t = k * dt
-    xx_1D[k+1] = step_1D(xx_1D[k], t, dt, M, D)
+    #xx_1D[k+1] = step_1D(xx_1D[k], t, dt, M, D)
+    xx_1D[k+1] = step_1D(xx_1D[k], t, dt, M, dz, Kz)
 
 N_data = xx_1D[:, 0:M].T       # Les M premières colonnes
 P_data = xx_1D[:, M:2*M].T     # Les M colonnes du milieu
