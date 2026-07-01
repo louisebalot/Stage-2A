@@ -9,7 +9,7 @@ import dapper.tools.progressbar as pb
 pb.disable_progbar = True
 
 xx, yy = HMM.simulate()
-yy = np.maximum(yy, 1e-8)
+#yy = np.maximum(yy, 1e-8)
 
 N = 30
 infl = 1.02

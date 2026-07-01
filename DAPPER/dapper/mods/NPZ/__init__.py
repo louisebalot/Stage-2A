@@ -1,7 +1,7 @@
 import numpy as np
 import dapper.mods as modelling
 
-# constantes
+# constantes biologiques
 mu_max = 0.9        # taux croissance max phytoplancton
 K_N = 0.8           # gradualité de la croissance des nutriments
 g_max = 1.8         # taux broutage max zooplancton
@@ -11,20 +11,41 @@ m_Z = 0.2           # taux mortalité linéaire zooplancton
 beta = 0.6          # efficacité assimilation zooplancton (transformé en biomasse)
 gamma_Z = 0.1       # taux excretion, recyclage nutriments par zooplancton
 
+P_seuil = 0.1       # Seuil de broutage (Grazing threshold)
+N_deep = 3.0        # Réserve infinie de nutriments au fond
+
 # État initial [N, P, Z]
 x0 = np.array([2.0, 0.5, 0.1])
 
-## réglages 1D 
-M = 50              # Nombre de couches
-depth = 50          # Profondeur totale (m)
+## constances physiques
+M = 30              # Nombre de couches
+depth = 100         # Profondeur totale (m)
 dz = depth / M      # épaisseur couche
-Kz = 0.7            # coefficient de diffusion verticale
+# Kz = 0.7          # coefficient de diffusion verticale fixe (changé!)
 k_ext = 0.03        # Coefficient d'atténuation de la lumière
 z_levels = np.linspace(0, depth, M) # Profondeurs de chaque couche
 
-"""N0 = np.linspace(1.0, 3.0, M)
-P0 = np.linspace(0.8, 0.2, M)
-Z0 = np.full(M, 0.1)"""
+# paramètres de diffusion
+Kzb = 0.1           # Diffusion au fond (stratifié, calme)
+Kz0 = 10.0          # Diffusion en surface (brassé par le vent)
+c_therm = 5.0 / depth   # Finesse de la thermocline
+
+# Fonction MLD(t) : Profondeur de la couche de mélange
+# mixed layer depth
+def MLD(t):
+    MLD_hiver = 0.8 * depth
+    MLD_ete = 0.2 * depth
+    moyenne = (MLD_hiver + MLD_ete) / 2.0
+    amplitude = (MLD_hiver - MLD_ete) / 2.0
+    return moyenne - amplitude * np.cos(2 * np.pi * t / 365)
+
+def calcul_Kz(z, t):
+    Mt = MLD(t)
+    num = np.arctan(c_therm * (Mt - z)) - np.arctan(c_therm * (Mt - depth))
+    den = np.arctan(c_therm * Mt) - np.arctan(c_therm * (Mt - depth))
+    return Kzb + (Kz0 - Kzb) * (num / den)
+
+# état initial
 N0 = np.full(M, 2.0)
 P0 = np.full(M, 0.1)
 Z0 = np.full(M, 0.1) 
@@ -62,55 +83,6 @@ def step(x0, t0, dt):
 
 
 ##### colonne d'eau 1D en Z
-"""
-# mélange turbulent
-def get_diffusion_matrix(M, dz, Kz):
-
-    #Crée une matrice de diffusion tridiagonale pour M couches.
-    #dz : épaisseur d'une couche.
-    #Kz : coefficient de diffusion verticale.
-
-    diag_val = -2.0 * Kz / dz**2
-    off_val = 1.0 * Kz / dz**2
-    
-    # Matrice tridiagonale
-    D = np.diag([diag_val] * M) + \
-        np.diag([off_val] * (M - 1), k=1) + \
-        np.diag([off_val] * (M - 1), k=-1)
-    
-    # Conditions aux limites Neumann
-    D[0, 0] = -1.0 * Kz / dz**2
-    D[-1, -1] = -1.0 * Kz / dz**2
-    
-    return D
-
-
-@modelling.ens_compatible
-def dxdt_1D(x_flat, t):
-    original_shape = x_flat.shape 
-    
-    x = x_flat.reshape(3, M, -1)
-    x = np.maximum(x, 1e-8)
-    N_conc, P_conc, Z_conc = x[0], x[1], x[2] 
-    
-    # cyclage
-    T_saison = 1000 
-    saison = 0.5 * (1 + np.sin(2 * np.pi * t / T_saison))
-    mu_saisonnier = mu_max * (0.2 + 0.8 * saison)
-
-    # loi beer-lambert
-    lumiere = np.exp(-k_ext * z_levels).reshape(M, 1)
-
-    mu_P = mu_saisonnier * lumiere * (N_conc / (K_N + N_conc))
-    g_Z = g_max * (P_conc / (K_P + P_conc))
-    
-    dN = -mu_P * P_conc + gamma_Z * Z_conc + m_P * P_conc + m_Z * Z_conc + (1 - beta) * g_Z * Z_conc
-    dP = mu_P * P_conc - g_Z * Z_conc - m_P * P_conc
-    dZ = beta * g_Z * Z_conc - m_Z * Z_conc - gamma_Z * Z_conc
-    
-    return np.array([dN, dP, dZ]).reshape(original_shape)
-
-D = get_diffusion_matrix(M, dz, Kz)"""
 
 # version adaptée fortran
 @modelling.ens_compatible
@@ -122,10 +94,10 @@ def dxdt_1D(x_flat, t):
     
     # Cycle saisonnier
     T_saison = 365 
-    saison = 0.5 * (1 + np.sin(2 * np.pi * t / T_saison))
+    saison = 0.5 * (1 - np.cos(2 * np.pi * t / T_saison))
     mu_saisonnier = mu_max * (0.2 + 0.8 * saison)
 
-    # Auto-ombrage (Self-shading) : calcul de la biomasse cumulée au-dessus
+    # Auto-ombrage - Self-shading : calcul de la biomasse cumulée au-dessus
     P_cumul = np.cumsum(P_conc, axis=0)
     P_moy_au_dessus = P_cumul / (np.arange(M).reshape(M, 1) + 1)
     
@@ -134,7 +106,10 @@ def dxdt_1D(x_flat, t):
     lumiere = np.exp(-k_ext * z_levels.reshape(M, 1) - k_self * P_moy_au_dessus)
 
     mu_P = mu_saisonnier * lumiere * (N_conc / (K_N + N_conc))
-    g_Z = g_max * (P_conc / (K_P + P_conc))
+    # Le Zooplancton ne mange plus si P < P_seuil
+    P_eff = np.maximum(P_conc - P_seuil, 0.0)
+    g_Z = g_max * (P_eff / (K_P + P_eff))
+    #g_Z = g_max * (P_conc / (K_P + P_conc))
     
     dN = -mu_P * P_conc + gamma_Z * Z_conc + m_P * P_conc + m_Z * Z_conc + (1 - beta) * g_Z * Z_conc
     dP = mu_P * P_conc - g_Z * Z_conc - m_P * P_conc
@@ -146,13 +121,14 @@ def dxdt_1D(x_flat, t):
 rk4_step_1D = modelling.with_rk4(dxdt_1D, autonom=False)
 
 
-def step_1D(etat_precedent, t, dt, M, dz, Kz):
+def step_1D(etat_precedent, t, dt, M, dz):
     """
     Calcule un pas de temps complet sans matrice globale de diffusion,
-    en appliquant directement les différences finies explicites (façon Fortran).
+    en appliquant directement les différences finies explicites (comme Fortran).
     """
     x_bio_finale = rk4_step_1D(etat_precedent, t, dt) 
-    coeff = Kz / (dz**2)
+    Kz_array = calcul_Kz(z_levels, t)
+    coeff = Kz_array / (dz**2)
 
     # modèle vérité
     if etat_precedent.ndim == 1:
@@ -162,14 +138,16 @@ def step_1D(etat_precedent, t, dt, M, dz, Kz):
         
         for i in range(3):
             x = etat_initial[i]
-            # Équation de diffusion au cœur de la colonne (schéma centré)
-            diffusion[i, 1:-1] = coeff * (x[2:] - 2 * x[1:-1] + x[:-2])
-            
-            # Conditions Neumann à flux nul (Surface et Fond)
-            diffusion[i, 0]  = coeff * (x[1] - x[0])
-            diffusion[i, -1] = coeff * (x[-2] - x[-1])
+            # éléments finis
+            diffusion[i, 1:-1] = coeff[1:-1] * (x[2:] - 2 * x[1:-1] + x[:-2])
+            diffusion[i, 0]  = coeff[0] * (x[1] - x[0])
             
             x_bio_finale[i] += dt * diffusion[i]
+            
+        # Conditions de Dirichlet au fond (réserve infinie)
+        x_bio_finale[0, -1] = N_deep
+        x_bio_finale[1, -1] = 0.0
+        x_bio_finale[2, -1] = 0.0
             
         return np.maximum(x_bio_finale, 1e-8).flatten()
         
@@ -180,14 +158,30 @@ def step_1D(etat_precedent, t, dt, M, dz, Kz):
         etat_initial = etat_precedent.reshape(nb_membres, 3, M) 
         diffusion = np.zeros((nb_membres, 3, M))
         
+        coeff_b = coeff.reshape(1, M)
+
         for i in range(3):
             x = etat_initial[:, i, :] 
-            diffusion[:, i, 1:-1] = coeff * (x[:, 2:] - 2 * x[:, 1:-1] + x[:, :-2])
-            
-            # Conditions Neumann vectorisées
-            diffusion[:, i, 0]  = coeff * (x[:, 1] - x[:, 0])
-            diffusion[:, i, -1] = coeff * (x[:, -2] - x[:, -1])
+            diffusion[:, i, 1:-1] = coeff_b[:, 1:-1] * (x[:, 2:] - 2 * x[:, 1:-1] + x[:, :-2])
+            diffusion[:, i, 0]  = coeff_b[:, 0] * (x[:, 1] - x[:, 0])
             
             x_bio_finale[:, i, :] += dt * diffusion[:, i, :]
             
+        x_bio_finale[:, 0, -1] = N_deep
+        x_bio_finale[:, 1, -1] = 0.0
+        x_bio_finale[:, 2, -1] = 0.0
+            
         return np.maximum(x_bio_finale, 1e-8).reshape(nb_membres, -1)
+    
+
+def step_1D_log(w, t, dt, M, dz):
+
+    w = np.clip(w, -50, 50)
+    x_physique = np.exp(w)
+    
+    x_suivant = step_1D(x_physique, t, dt, M, dz)
+    x_suivant = np.maximum(x_suivant, 1e-20)
+    
+    w_suivant = np.log(x_suivant)
+    
+    return w_suivant

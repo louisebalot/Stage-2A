@@ -205,6 +205,7 @@ class KETKF(da_method):
             R = Obs_op.noise.C.full
 
             # inflation adaptative ---
+            """
             # innovation
             d = y - mu_f_obs
             
@@ -222,7 +223,7 @@ class KETKF(da_method):
                 lambda_infl = 1.0
                 
             lambda_infl = np.clip(lambda_infl, 1.0, self.infl)
-            # ----
+            # ----"""
 
             # Décomposition en valeurs propres de R
             val_p, vec_p = sla.eigh(R)
@@ -237,8 +238,26 @@ class KETKF(da_method):
             # Construction de l'État Augmenté (n+p variables, N membres)
             Z = np.vstack((X_f, Y_tilde))
             
-            Z = Z - Z.mean(axis=1, keepdims=True)
             K = self.compute_kernel(Z, Z)
+
+            N = K.shape[0]
+            H = np.eye(N) - np.ones((N, N)) / N
+            K = H @ K @ H
+            #Z = Z - Z.mean(axis=1, keepdims=True)
+            #K = self.compute_kernel(Z, Z)
+
+            # afficher le rang de K  ----
+            if not hasattr(self, 'rang_history'):
+                self.rang_history = []
+
+            # eigvalsh est la fonction optimisée pour les matrices symétriques (comme K)
+            val_propres = np.linalg.eigvalsh(K)
+
+            # Le rang effectif = nombre de valeurs propres significativement > 0
+            rang_effectif = np.sum(val_propres > 1e-12)
+
+            self.rang_history.append(rang_effectif)
+            # ----
             
             K_X  = K[:n, :n]      # Bloc purement modèle (n x n)
             K_H  = K[n:, n:]      # Bloc purement observé (p x p)
@@ -296,7 +315,7 @@ class KETKF(da_method):
                 E = mu_a + R_X_resampled.T
 
             # inflation pour éviter les ensemble collapse
-            #E = inflate_ens(E, self.infl)
-            E = inflate_ens(E, lambda_infl)
+            E = inflate_ens(E, self.infl)
+            #E = inflate_ens(E, lambda_infl)
                 
             self.stats.assess(k, kObs, 'a', E=E)

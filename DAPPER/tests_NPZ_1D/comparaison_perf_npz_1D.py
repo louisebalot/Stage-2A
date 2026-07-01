@@ -42,7 +42,7 @@ for k in range(n_simulations):
     print(f"Simulation {k+1}/{n_simulations}")
 
     xx, yy = HMM.simulate()
-    yy = np.maximum(yy, 1e-8)
+    #yy = np.maximum(yy, 1e-8)
 
     for f in creer_filtres():
 
