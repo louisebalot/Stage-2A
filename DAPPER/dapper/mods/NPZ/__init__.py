@@ -3,26 +3,26 @@ import dapper.mods as modelling
 
 # constantes biologiques
 mu_max = 0.9        # taux croissance max phytoplancton
-K_N = 0.8           # gradualité de la croissance des nutriments
-g_max = 1.8         # taux broutage max zooplancton
-K_P = 0.8           # influence prédation pour phytoplancton
-m_P = 0.1           # taux mortalité linéaire phytoplancton
-m_Z = 0.2           # taux mortalité linéaire zooplancton
-beta = 0.6          # efficacité assimilation zooplancton (transformé en biomasse)
+K_N = 0.5           # gradualité de la croissance des nutriments
+g_max = 1.0         # taux broutage max zooplancton
+K_P = 1.0           # influence prédation pour phytoplancton
+m_P = 0.07          # taux mortalité linéaire phytoplancton
+m_Z = 0.07          # taux mortalité linéaire zooplancton
+beta = 0.5          # efficacité assimilation zooplancton (transformé en biomasse)
 gamma_Z = 0.1       # taux excretion, recyclage nutriments par zooplancton
 
 P_seuil = 0.1       # Seuil de broutage (Grazing threshold)
-N_deep = 3.0        # Réserve infinie de nutriments au fond
+N_deep = 10.0       # Réserve infinie de nutriments au fond
 
 # État initial [N, P, Z]
 x0 = np.array([2.0, 0.5, 0.1])
 
 ## constances physiques
-M = 30              # Nombre de couches
-depth = 100         # Profondeur totale (m)
+M = 20              # Nombre de couches
+depth = 200         # Profondeur totale (m)
 dz = depth / M      # épaisseur couche
 # Kz = 0.7          # coefficient de diffusion verticale fixe (changé!)
-k_ext = 0.03        # Coefficient d'atténuation de la lumière
+k_ext = 0.02        # Coefficient d'atténuation de la lumière
 z_levels = np.linspace(0, depth, M) # Profondeurs de chaque couche
 
 # paramètres de diffusion
@@ -46,7 +46,7 @@ def calcul_Kz(z, t):
     return Kzb + (Kz0 - Kzb) * (num / den)
 
 # état initial
-N0 = np.full(M, 2.0)
+N0 = np.full(M, 10.0)
 P0 = np.full(M, 0.1)
 Z0 = np.full(M, 0.1) 
 x0_1D = np.concatenate([N0, P0, Z0])
