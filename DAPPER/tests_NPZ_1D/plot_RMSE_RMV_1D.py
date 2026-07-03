@@ -1,25 +1,27 @@
 import plotly.graph_objects as go
 import numpy as np
 from plotly.subplots import make_subplots
-from dapper.mods.NPZ.settings_1D import HMM
+from dapper.mods.NPZ.settings_1D import HMM_log, HMM_physique
 from dapper.da_methods import EnKF, KETKF
 import dapper.tools.progressbar as pb
 
 pb.disable_progbar = True
 
-xx, yy = HMM.simulate()
-#yy = np.maximum(yy, 1e-8)
-t_obs = HMM.tseq.tt[HMM.tseq.dko :: HMM.tseq.dko]
+xx_phys, yy_phys = HMM_physique.simulate()
+
+xx_pour_stats = np.log(np.maximum(xx_phys, 1e-20))
+
+t_obs = HMM_physique.tseq.tt[HMM_physique.tseq.dko :: HMM_physique.tseq.dko]
 
 N = 50
-infl = 1.04
+infl = 1.25
 
 def creer_filtres():
     return [
-        EnKF('Sqrt', N=N, infl=1.04, rot=True),
+        EnKF('Sqrt', N=N, infl=1.01, rot=True),
         KETKF(N=N, infl=infl, rot=True, kernel_type='linear'),
         KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=0.01, reg_tikhonov=1e-3),
-        #KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-3),
+        KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-2),
         #KETKF(N=N, infl=infl, rot=True, kernel_type='polynomial', poly_degree=1, reg_tikhonov=1e-2),
         #KETKF(N=N, infl=infl, rot=True, kernel_type='rbf_exp', sigma_rbf=0.25, reg_tikhonov=1e-3),
         #KETKF(N=N, infl=infl, rot=True, kernel_type='rbf', sigma_rbf=0.5, reg_tikhonov=1e-3),
@@ -51,20 +53,15 @@ for i, xp in enumerate(creer_filtres()):
     nom_algo = nom_filtre(xp)
     print(f"Assimilation en cours pour {nom_algo}")
     
-    try:
-        xp.assimilate(HMM, xx, yy, liveplots=False)
-        rmse_t = xp.stats.err.rms.a
-        rmv_t = xp.stats.spread.rms.a
+    xp.assimilate(HMM_log, xx_pour_stats, yy_phys, liveplots=False)
+    rmse_t = xp.stats.err.rms.a
+    rmv_t = xp.stats.spread.rms.a
 
-        if hasattr(xp, 'rang_history'):
-            rang_t = xp.rang_history
-        else:
-            # L'EnKF n'a pas de matrice de Gram K
-            rang_t = [np.nan] * len(t_obs)
-        
-    except Exception as e:
-        print(f"Attention : {nom_algo} a divergé ou échoué ({e}).")
-        continue
+    if hasattr(xp, 'rang_history'):
+        rang_t = xp.rang_history
+    else:
+        # L'EnKF n'a pas de matrice de Gram K
+        rang_t = [np.nan] * len(t_obs)
     
     color = colors[i % len(colors)]
     
@@ -89,7 +86,7 @@ for i, xp in enumerate(creer_filtres()):
     ), row=3, col=1)
 
 fig.update_layout(
-    title="Analyse de l'effondrement : impact des noyaux sur le rang et l'erreur",
+    title=f"Analyse de l'effondrement : impact des noyaux sur le rang et l'erreur, N = {N} et inflation = {infl}",
     height=1000,
     hovermode="x unified",
     template="plotly_white",
@@ -102,7 +99,7 @@ fig.add_hline(y=N, row=3, col=1, line_dash="dash", line_color="gray",
 fig.update_xaxes(title_text="Temps (Jours)", row=3, col=1)
 fig.update_yaxes(title_text="RMSE", row=1, col=1)
 fig.update_yaxes(title_text="RMV", row=2, col=1)
-fig.update_yaxes(title_text="Rang (K)", range=[0, N+5], row=3, col=1)
+fig.update_yaxes(title_text="Rang (K)", row=3, col=1)
 
 jours_max = int(max(t_obs))
 nb_annees = (jours_max // 365) + 1

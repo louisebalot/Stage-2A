@@ -240,21 +240,16 @@ class KETKF(da_method):
             
             K = self.compute_kernel(Z, Z)
 
-            N = K.shape[0]
-            H = np.eye(N) - np.ones((N, N)) / N
-            K = H @ K @ H
-            #Z = Z - Z.mean(axis=1, keepdims=True)
-            #K = self.compute_kernel(Z, Z)
-
             # afficher le rang de K  ----
             if not hasattr(self, 'rang_history'):
                 self.rang_history = []
 
-            # eigvalsh est la fonction optimisée pour les matrices symétriques (comme K)
             val_propres = np.linalg.eigvalsh(K)
 
-            # Le rang effectif = nombre de valeurs propres significativement > 0
-            rang_effectif = np.sum(val_propres > 1e-12)
+            # ranger par ordre décroissant
+            val_propres = val_propres[::-1]
+            
+            rang_effectif = np.sum(val_propres > 1e-12 * val_propres[0])
 
             self.rang_history.append(rang_effectif)
             # ----
@@ -285,7 +280,7 @@ class KETKF(da_method):
             Pa_X = (1.0 / (self.N - 1)) * (K_X - K_XH @ terme_central @ K_XH.T)
 
             # sécurité 
-            Pa_X = Pa_X + self.reg_tikhonov * eye(n)
+            Pa_X = Pa_X + 1e-6 * eye(n)
             
             # Décomposition en valeurs propres de Pa_X
             valP_Pa_X, U_Pa = sla.eigh(Pa_X)

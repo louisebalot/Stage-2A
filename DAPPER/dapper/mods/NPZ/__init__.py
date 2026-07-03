@@ -6,10 +6,10 @@ mu_max = 0.9        # taux croissance max phytoplancton
 K_N = 0.5           # gradualité de la croissance des nutriments
 g_max = 1.0         # taux broutage max zooplancton
 K_P = 1.0           # influence prédation pour phytoplancton
-m_P = 0.07          # taux mortalité linéaire phytoplancton
-m_Z = 0.07          # taux mortalité linéaire zooplancton
+m_P = 0.15          # taux mortalité linéaire phytoplancton
+m_Z = 0.10          # taux mortalité linéaire zooplancton
 beta = 0.5          # efficacité assimilation zooplancton (transformé en biomasse)
-gamma_Z = 0.1       # taux excretion, recyclage nutriments par zooplancton
+gamma_Z = 0.05      # taux excretion, recyclage nutriments par zooplancton
 
 P_seuil = 0.1       # Seuil de broutage (Grazing threshold)
 N_deep = 10.0       # Réserve infinie de nutriments au fond
