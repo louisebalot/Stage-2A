@@ -1,7 +1,7 @@
 import dapper as dpr
 import pandas as pd
 import numpy as np
-from dapper.mods.NPZ.settings_1D import HMM
+from dapper.mods.NPZ.settings_1D import HMM_physique, HMM_log
 from dapper.da_methods import EnKF, KETKF
 import time
 import os
@@ -12,17 +12,17 @@ pb.disable_progbar = True
 n_simulations = 10
 results_list = []
 
-N = 40
-infl = 1.04
+N = 50
+infl = 1.25
 
 def creer_filtres():
-    return [EnKF('Sqrt', N=N, infl=infl, rot=True),
+    return [EnKF('Sqrt', N=N, infl=1.01, rot=True),
     KETKF(N=N, infl=infl, rot=True, kernel_type='linear'),
     KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=0.01, reg_tikhonov=1e-3),
     KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-3),
     KETKF(N=N, infl=infl, rot=True, kernel_type='polynomial', poly_degree=1, reg_tikhonov=1e-2),
-    KETKF(N=N, infl=infl, rot=True, kernel_type='rbf_exp', sigma_rbf=0.25, reg_tikhonov=1e-3),
-    KETKF(N=N, infl=infl, rot=True, kernel_type='rbf', sigma_rbf=0.5, reg_tikhonov=1e-3),
+    #KETKF(N=N, infl=infl, rot=True, kernel_type='rbf_exp', sigma_rbf=0.25, reg_tikhonov=1e-3),
+    #KETKF(N=N, infl=infl, rot=True, kernel_type='rbf', sigma_rbf=0.5, reg_tikhonov=1e-3),
     KETKF(N=N, infl=infl, rot=True, kernel_type='lap', reg_tikhonov=1e-3)]
 
 def nom_filtre(f):
@@ -41,29 +41,23 @@ times = {nom: [] for nom in noms}
 for k in range(n_simulations):
     print(f"Simulation {k+1}/{n_simulations}")
 
-    xx, yy = HMM.simulate()
-    #yy = np.maximum(yy, 1e-8)
+    #xx, yy = HMM.simulate()
+    xx_phys, yy_phys = HMM_physique.simulate()
+    xx_pour_stats = np.log(np.maximum(xx_phys, 1e-20))
 
     for f in creer_filtres():
 
         nom = nom_filtre(f)
-        
-        xps = dpr.xpList()
-        xps += f
-        xps[-1].name = nom
-
         t0 = time.time()
-        xps.launch(HMM, liveplots=False, save_as=False)
+        #xps.launch(HMM, liveplots=False, save_as=False)
+        f.assimilate(HMM_log, xx_pour_stats, yy_phys, liveplots=False)
         t1 = time.time()
-
-        xp = xps[0]
-
-        try:
-            val_rmse = xp.avrgs["err"].rms.a.val
-            val_rmv  = xp.avrgs["spread"].rms.a.val
-        except Exception as e:
-            val_rmse = np.nan
-            val_rmv  = np.nan
+        
+        val_rmse = np.nanmean(f.stats.err.rms.a)
+        val_rmv  = np.nanmean(f.stats.spread.rms.a)
+        
+        if hasattr(f, 'rang_history'):
+            delattr(f, 'rang_history')
 
         rmse[nom].append(val_rmse)
         rmv[nom].append(val_rmv)
