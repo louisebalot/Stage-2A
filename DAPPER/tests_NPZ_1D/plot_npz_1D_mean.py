@@ -11,7 +11,7 @@ xx, yy = HMM.simulate()
 
 N = 50
 infl = 1.02
-enkf = EnKF('Sqrt', N=N, infl=1.01, rot=True)
+enkf = EnKF('Sqrt', N=N, infl=1.01, rot=True, log_transform=True)
 ketkf_lin = KETKF(N=N, kernel_type='linear', infl=infl, rot=True, reg_tikhonov=1e-10, log_transform=True)
 ketkf_hyp  = KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-3, log_transform=True)
 ketkf_sig = KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=0.01 , reg_tikhonov=1e-3, log_transform=True)

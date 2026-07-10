@@ -1,28 +1,28 @@
 import dapper as dpr
 import pandas as pd
 import numpy as np
-from dapper.mods.NPZ.settings_1 import HMM
 from dapper.da_methods import EnKF, KETKF
 import time
-import os
-from contextlib import redirect_stdout
+import dapper.mods.Lorenz63.sakov2012 as L63
 import dapper.tools.progressbar as pb
 pb.disable_progbar = True
+
+HMM = L63.HMM
 
 n_simulations = 10
 results_list = []
 
 N = 10
-infl = 1.04
+infl = 1.02
 
 def creer_filtres():
-    return [EnKF('Sqrt', N=N, infl=infl, rot=True, truncated=True),
-    KETKF(N=N, infl=infl, rot=True, kernel_type='linear', truncated=True),
-    KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=0.01, reg_tikhonov=1e-3, truncated=True),
-    KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-3, truncated=True),
-    KETKF(N=N, infl=infl, rot=True, kernel_type='polynomial', poly_degree=1, reg_tikhonov=1e-2, truncated=True),
-    KETKF(N=N, infl=infl, rot=True, kernel_type='rbf_exp', sigma_rbf=0.25, reg_tikhonov=1e-3,truncated=True),
-    KETKF(N=N, infl=infl, rot=True, kernel_type='rbf', sigma_rbf=0.5, reg_tikhonov=1e-3, truncated=True)]
+    return [EnKF('Sqrt', N=N, infl=infl, rot=True),
+    KETKF(N=N, infl=infl, rot=True, kernel_type='linear'),
+    KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=0.01, reg_tikhonov=1e-3),
+    KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-3),
+    KETKF(N=N, infl=infl, rot=True, kernel_type='polynomial', poly_degree=1, reg_tikhonov=1e-2),
+    KETKF(N=N, infl=infl, rot=True, kernel_type='rbf_exp', sigma_rbf=0.25, reg_tikhonov=1e-3),
+    KETKF(N=N, infl=infl, rot=True, kernel_type='rbf', sigma_rbf=0.5, reg_tikhonov=1e-3)]
 
 def nom_filtre(f):
     try:
@@ -41,7 +41,6 @@ for k in range(n_simulations):
     print(f"Simulation {k+1}/{n_simulations}")
 
     xx, yy = HMM.simulate()
-    yy = np.maximum(yy, 1e-8)
 
     for f in creer_filtres():
 
