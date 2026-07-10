@@ -7,7 +7,7 @@ from dapper.mods.NPZ import step_1D, x0_1D, M, depth, dz
 # Simulation
 dt = 0.1
 #k_steps = 7300   # 2 ans
-k_steps = 18250 
+k_steps = 182500
 xx_1D = np.zeros((k_steps, 3 * M))
 xx_1D[0] = x0_1D
 

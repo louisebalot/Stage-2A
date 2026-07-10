@@ -103,7 +103,10 @@ def dxdt_1D(x_flat, t):
     
     # k_ext = atténuation de l'eau, k_self = coefficient d'auto-ombrage
     k_self = 0.05 
-    lumiere = np.exp(-k_ext * z_levels.reshape(M, 1) - k_self * P_moy_au_dessus)
+    #lumiere = np.exp(-k_ext * z_levels.reshape(M, 1) - k_self * P_moy_au_dessus)
+    P_int = dz * np.cumsum(P_conc, axis=0)
+
+    lumiere = np.exp(-k_ext * z_levels.reshape(M,1)-k_self * P_int)
 
     mu_P = mu_saisonnier * lumiere * (N_conc / (K_N + N_conc))
     # Le Zooplancton ne mange plus si P < P_seuil
@@ -173,15 +176,3 @@ def step_1D(etat_precedent, t, dt, M, dz):
             
         return np.maximum(x_bio_finale, 1e-8).reshape(nb_membres, -1)
     
-
-def step_1D_log(w, t, dt, M, dz):
-
-    w = np.clip(w, -50, 50)
-    x_physique = np.exp(w)
-    
-    x_suivant = step_1D(x_physique, t, dt, M, dz)
-    x_suivant = np.maximum(x_suivant, 1e-20)
-    
-    w_suivant = np.log(x_suivant)
-    
-    return w_suivant

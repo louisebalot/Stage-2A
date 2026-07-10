@@ -2,35 +2,32 @@ import numpy as np
 import dapper as dpr
 from dapper.da_methods import EnKF, KETKF
 
-from dapper.mods.NPZ.settings_1D import HMM_log, HMM_physique, M
+from dapper.mods.NPZ.settings_1D import HMM, M
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import dapper.tools.progressbar as pb
 pb.disable_progbar = True
-
-#xx, yy = HMM.simulate()
-xx_phys, yy_phys = HMM_physique.simulate()
+xx, yy = HMM.simulate()
 
 N = 50
-infl = 1.04
+infl = 1.02
 enkf = EnKF('Sqrt', N=N, infl=1.01, rot=True)
-ketkf_lin = KETKF(N=N, kernel_type='linear', infl=infl, rot=True, reg_tikhonov=1e-10)
-ketkf_hyp  = KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-3)
-ketkf_sig = KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=0.01 , reg_tikhonov=1e-3)
-ketkf_lap = KETKF(N=N, infl=infl, rot=True, kernel_type='lap', reg_tikhonov=1e-3)
+ketkf_lin = KETKF(N=N, kernel_type='linear', infl=infl, rot=True, reg_tikhonov=1e-10, log_transform=True)
+ketkf_hyp  = KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-3, log_transform=True)
+ketkf_sig = KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=0.01 , reg_tikhonov=1e-3, log_transform=True)
+ketkf_lap = KETKF(N=N, infl=infl, rot=True, kernel_type='lap', reg_tikhonov=1e-3, log_transform=True)
 
-xx_pour_stats = np.log(np.maximum(xx_phys, 1e-20))
 
-enkf.assimilate(HMM_log, xx_pour_stats, yy_phys, liveplots=False)
-ketkf_lin.assimilate(HMM_log, xx_pour_stats, yy_phys, liveplots=False)
-ketkf_hyp.assimilate(HMM_log, xx_pour_stats, yy_phys, liveplots=False)
-ketkf_sig.assimilate(HMM_log, xx_pour_stats, yy_phys, liveplots=False)
-ketkf_lap.assimilate(HMM_log, xx_pour_stats, yy_phys, liveplots=False)
+enkf.assimilate(HMM, xx, yy, liveplots=False)
+ketkf_lin.assimilate(HMM, xx, yy, liveplots=False)
+ketkf_hyp.assimilate(HMM, xx, yy, liveplots=False)
+ketkf_sig.assimilate(HMM, xx, yy, liveplots=False)
+ketkf_lap.assimilate(HMM, xx, yy, liveplots=False)
 
-time_truth = HMM_physique.tseq.tt 
-truth = xx_phys
+time_truth = HMM.tseq.tt 
+truth = xx
 # liste[début : fin : pas]
-time_analysis = HMM_physique.tseq.tt[HMM_physique.tseq.dko :: HMM_physique.tseq.dko]
+time_analysis = HMM.tseq.tt[HMM.tseq.dko :: HMM.tseq.dko]
 
 mu_enkf = enkf.stats.mu.a
 mu_ketkf_lin = ketkf_lin.stats.mu.a
@@ -38,14 +35,8 @@ mu_ketkf_hyp = ketkf_hyp.stats.mu.a
 mu_ketkf_sig = ketkf_sig.stats.mu.a
 mu_ketkf_lap = ketkf_lap.stats.mu.a
 
-mu_enkf = np.exp(mu_enkf)
-mu_ketkf_lin = np.exp(mu_ketkf_lin)
-mu_ketkf_hyp = np.exp(mu_ketkf_hyp)
-mu_ketkf_sig = np.exp(mu_ketkf_sig)
-mu_ketkf_lap = np.exp(mu_ketkf_lap)
-
 t_obs = time_analysis
-y_plot = [np.array(y).item() for y in yy_phys]
+y_plot = [np.array(y).item() for y in yy]
 
 fig = make_subplots(
     rows=3, cols=1, 

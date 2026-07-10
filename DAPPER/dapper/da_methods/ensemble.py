@@ -35,6 +35,9 @@ class EnKF(da_method, ens_method):
     upd_a: str
     N: int
 
+    log_transform: bool = False
+    truncated: bool = False
+
     def assimilate(self, HMM, xx, yy):
         # Init
         E = HMM.X0.sample(self.N)
@@ -56,13 +59,17 @@ class EnKF(da_method, ens_method):
                     self.upd_a,
                     self.stats,
                     ko,
+                    self.log_transform
                 )
+                if self.truncated:
+                    E = np.maximum(E, 1e-20)
+
                 E = post_process(E, self.infl, self.rot)
 
             self.stats.assess(k, ko, E=E)
 
 
-def EnKF_analysis(E, Eo, hnoise, y, upd_a, stats=None, ko=None):
+def EnKF_analysis(E, Eo, hnoise, y, upd_a, stats=None, ko=None, log_transform=False):
     """Perform the EnKF analysis update.
 
     This implementation includes several flavours and forms,
@@ -71,6 +78,12 @@ def EnKF_analysis(E, Eo, hnoise, y, upd_a, stats=None, ko=None):
     Main references: [sakov2008b][],
     [sakov2008a][], [hoteit2015a][]
     """
+
+    # log transform -----------------
+    if log_transform:
+        E = np.log(np.maximum(E, 1e-20))
+    # ---------------------------------
+
     R = hnoise.C  # Obs noise cov
     N, Nx = E.shape  # Dimensionality
     N1 = N - 1  # Ens size - 1
@@ -227,6 +240,11 @@ def EnKF_analysis(E, Eo, hnoise, y, upd_a, stats=None, ko=None):
             stats.trHK.a[ko] = trHK / hnoise.M  # type: ignore[reportPossiblyUnbound]
         elif "HK" in locals():
             stats.trHK.a[ko] = HK.trace() / hnoise.M  # type: ignore[reportPossiblyUnbound]
+
+    # -------------------------------
+    if log_transform:
+        E = np.exp(np.clip(E, -50, 50))
+    # --------------------------------
 
     return E
 

@@ -26,12 +26,16 @@ class KETKF(da_method):
     c_tanh: float = 1.0      # Pour le tanh
     reg_tikhonov: float = 1e-15
 
+    log_transform: bool = False
+    truncated: bool = False
+
     def phi_poincare(self, X):
         coef = sqrt(self.c_tanh) * np.linalg.norm(X, axis=1, keepdims=True)
 
         # sécurité
         coef[coef == 0] = 1e-16
-        coef_boule = np.clip(coef, -0.9999, 0.9999)
+        #coef_boule = np.clip(coef, -0.9999, 0.9999)
+        coef_boule = 0.9999 * np.tanh(coef)
 
         return X * (np.arctanh(coef_boule) / coef) 
 
@@ -54,15 +58,15 @@ class KETKF(da_method):
             prod = X @ Y.T
             return np.tanh(self.c_tanh * prod)
         
-        elif self.kernel_type == 'hyperbolique':
-            return self.phi_poincare(X) @ self.phi_poincare(Y).T
-        
         else:  # scaler 
             std_X = np.std(X, axis=0, keepdims=True) + 1e-8
             X_s = (X - np.mean(X, axis=0, keepdims=True)) / std_X
             Y_s = (Y - np.mean(Y, axis=0, keepdims=True)) / std_X
             
-            if self.kernel_type == 'rbf':
+            if self.kernel_type == 'hyperbolique':
+                return self.phi_poincare(X) @ self.phi_poincare(Y).T
+    
+            elif self.kernel_type == 'rbf':
                 dist2 = cdist(X_s, Y_s, 'sqeuclidean')
                 dist2 = np.clip(dist2, 0, 1e6)
                 K = np.exp(-dist2 / (2.0 * sigma_rbf**2))
@@ -171,6 +175,7 @@ class KETKF(da_method):
         
         # Tirage de l'ensemble initial a priori
         E = HMM.X0.sample(self.N)
+        #E = np.maximum(E, 1e-20)
         
         # Dimension modèle
         n = E.shape[1]
@@ -180,11 +185,19 @@ class KETKF(da_method):
         for k, kObs, t, dt in progbar(HMM.tseq.ticker):
             # prévision
             E = HMM.Dyn(E, t - dt, dt)
+            #E = np.maximum(E, 1e-20)
             self.stats.assess(k, kObs, 'f', E=E)
             
-            if kObs is None:
+            if kObs is None: 
                 continue
                 
+            if t <= 365.0:
+                """print(
+                    "||A|| =", np.linalg.norm(E - np.mean(E, axis=0)),
+                    "spread =", np.mean(np.std(E, axis=0)))"""
+                self.stats.assess(k, kObs, 'a', E=E)
+                continue
+
             # observation
             y = yy[kObs] 
             if np.ndim(y) == 0:
@@ -194,12 +207,17 @@ class KETKF(da_method):
             
             # projection de l'ensemble de prévision dans l'espace observé
             E_obs = Obs_op(E)
-            
-            mu_f = mean(E, axis=0)
             mu_f_obs = mean(E_obs, axis=0)
-
-            X_f = (E - mu_f).T          # taille (n, N)
             Y_f = (E_obs - mu_f_obs).T  # taille (p, N)
+
+            # Passage en log si demandé  ----------------------------------------
+            if self.log_transform:
+                W = np.log(E)
+                mu_f = mean(W, axis=0)
+                X_f = (W - mu_f).T
+            else:
+                mu_f = mean(E, axis=0)
+                X_f = (E - mu_f).T
 
             # matrice de covariance de l'erreur d'observation R
             R = Obs_op.noise.C.full
@@ -245,12 +263,10 @@ class KETKF(da_method):
                 self.rang_history = []
 
             val_propres = np.linalg.eigvalsh(K)
-
             # ranger par ordre décroissant
             val_propres = val_propres[::-1]
-            
-            rang_effectif = np.sum(val_propres > 1e-12 * val_propres[0])
 
+            rang_effectif = np.sum(val_propres > 1e-12 * val_propres[0])
             self.rang_history.append(rang_effectif)
             # ----
             
@@ -299,15 +315,23 @@ class KETKF(da_method):
 
             # distinction de cas en fonction du rang r_Sigma
             if r_Sigma == self.N:
-                E = mu_a + sqrt(self.N - 1) * R_X.T
+                E_analyse = mu_a + sqrt(self.N - 1) * R_X.T
 
             elif r_Sigma < self.N:
                 R_X_aug = self.rotation_farchi_bocquet(R_X, r_Sigma)
-                E = mu_a + sqrt(self.N - 1) * R_X_aug.T
+                E_analyse = mu_a + sqrt(self.N - 1) * R_X_aug.T
                 
             else:
                 R_X_resampled = self.reechantillonnage_evensen(U_tilde, Sigma_tilde, r_Sigma)
-                E = mu_a + R_X_resampled.T
+                E_analyse = mu_a + R_X_resampled.T
+
+            # si log transform ----------------------------------------------------
+            if self.log_transform:
+                # E_ana est dans l'espace log, on le ramène en physique
+                E = np.exp(np.clip(E_analyse, -50, 50)) 
+            elif self.truncated:
+                # E_ana est déjà en physique, on tronque juste les négatifs
+                E = np.maximum(E_analyse, 1e-20)
 
             # inflation pour éviter les ensemble collapse
             E = inflate_ens(E, self.infl)
