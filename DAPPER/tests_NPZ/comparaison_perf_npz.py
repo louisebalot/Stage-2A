@@ -13,7 +13,7 @@ n_simulations = 10
 results_list = []
 
 N = 10
-infl = 1.04
+infl = 1.02
 
 def creer_filtres():
     return [EnKF('Sqrt', N=N, infl=infl, rot=True, truncated=True),

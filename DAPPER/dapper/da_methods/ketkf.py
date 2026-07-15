@@ -222,8 +222,7 @@ class KETKF(da_method):
             # matrice de covariance de l'erreur d'observation R
             R = Obs_op.noise.C.full
 
-            # inflation adaptative ---
-            """
+            # inflation adaptative --------------
             # innovation
             d = y - mu_f_obs
             
@@ -241,7 +240,7 @@ class KETKF(da_method):
                 lambda_infl = 1.0
                 
             lambda_infl = np.clip(lambda_infl, 1.0, self.infl)
-            # ----"""
+            # ----
 
             # Décomposition en valeurs propres de R
             val_p, vec_p = sla.eigh(R)
@@ -334,7 +333,7 @@ class KETKF(da_method):
                 E = np.maximum(E_analyse, 1e-20)
 
             # inflation pour éviter les ensemble collapse
-            E = inflate_ens(E, self.infl)
-            #E = inflate_ens(E, lambda_infl)
+            #E = inflate_ens(E, self.infl)
+            E = inflate_ens(E, lambda_infl)
                 
             self.stats.assess(k, kObs, 'a', E=E)
