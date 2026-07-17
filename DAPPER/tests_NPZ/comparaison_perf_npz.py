@@ -9,10 +9,10 @@ from contextlib import redirect_stdout
 import dapper.tools.progressbar as pb
 pb.disable_progbar = True
 
-n_simulations = 10
+n_simulations = 20
 results_list = []
 
-N = 10
+N = 20
 infl = 1.02
 
 def creer_filtres():
@@ -22,7 +22,8 @@ def creer_filtres():
     KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-3, truncated=True),
     KETKF(N=N, infl=infl, rot=True, kernel_type='polynomial', poly_degree=1, reg_tikhonov=1e-2, truncated=True),
     KETKF(N=N, infl=infl, rot=True, kernel_type='rbf_exp', sigma_rbf=0.25, reg_tikhonov=1e-3,truncated=True),
-    KETKF(N=N, infl=infl, rot=True, kernel_type='rbf', sigma_rbf=0.5, reg_tikhonov=1e-3, truncated=True)]
+    KETKF(N=N, infl=infl, rot=True, kernel_type='rbf', sigma_rbf=0.5, reg_tikhonov=1e-3, truncated=True),
+    KETKF(N=N, infl=infl, rot=True, kernel_type='lap', reg_tikhonov=1e-3, truncated=True)]
 
 def nom_filtre(f):
     try:

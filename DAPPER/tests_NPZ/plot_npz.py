@@ -11,9 +11,9 @@ pb.disable_progbar = True
 xx, yy = HMM.simulate()
 yy = np.maximum(yy, 1e-8)
 
-N = 30
-infl = 1.02
-enkf = EnKF('Sqrt', N=N, infl=1.02, rot=True)
+N = 40
+infl = 1.04
+enkf = EnKF('Sqrt', N=N, infl=infl, rot=True)
 ketkf_lin = KETKF(N=N, kernel_type='linear', infl=infl, rot=True, reg_tikhonov=1e-10)
 ketkf_hyp  = KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-3)
 ketkf_sig = KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=0.01 , reg_tikhonov=1e-3)

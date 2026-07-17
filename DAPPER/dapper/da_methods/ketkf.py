@@ -3,7 +3,8 @@ from dataclasses import dataclass
 import numpy as np
 import scipy.linalg as sla
 from scipy.spatial.distance import cdist
-from numpy import diag, eye, sqrt, zeros, ones, mean, std
+from numpy import diag, eye, sqrt, zeros, ones, mean, std 
+from dapper.tools.matrices import genOG_1
 
 import dapper as dpr
 from dapper.tools.progressbar import progbar
@@ -59,9 +60,9 @@ class KETKF(da_method):
             return np.tanh(self.c_tanh * prod)
         
         else:  # scaler 
-            std_X = np.std(X, axis=0, keepdims=True) + 1e-8
-            X_s = (X - np.mean(X, axis=0, keepdims=True)) / std_X
-            Y_s = (Y - np.mean(Y, axis=0, keepdims=True)) / std_X
+            std_X = np.std(X, axis=1, keepdims=True) + 1e-8
+            X_s = (X - np.mean(X, axis=1, keepdims=True)) / std_X
+            Y_s = (Y - np.mean(Y, axis=1, keepdims=True)) / std_X
             
             if self.kernel_type == 'hyperbolique':
                 return self.phi_poincare(X) @ self.phi_poincare(Y).T
@@ -100,11 +101,11 @@ class KETKF(da_method):
             else :
                 raise ValueError("Le noyau doit être 'linear', 'polynomial', 'sigmoid', 'hyperbolique', 'rbf', 'rbf_exp' ou 'lap'")
 
-    
+    """
     def rotation_farchi_bocquet(self, R_X, r_Sigma):
-        """
-        Cas r_Sigma < N
-        """
+        
+        #Cas r_Sigma < N
+
         RX = R_X.copy()
         n = RX.shape[0]
         eps = 1.0
@@ -120,14 +121,42 @@ class KETKF(da_method):
         for i in range (self.N - r_Sigma):
             q = r_Sigma + i+1
             theta = sqrt(q)/(sqrt(q)-eps)
-            #Q_eps = - theta/q * matrice_pattern(q, theta)
-            Q_eps = matrice_pattern(q, theta)
 
-            A_rand = np.random.randn(q, q)
-            Q_rand, _ = sla.qr(A_rand, mode='economic')
+            Q_eps = matrice_pattern(q, theta)
+            zeros_col = zeros((n, 1))
+            W = np.hstack([zeros_col, RX])
+            RX = W @ Q_eps
+
+            
+        return RX 
+    """
+    def rotation_farchi_bocquet(self, R_X, r_Sigma):
+        
+        # Cas r_Sigma < N 
+
+        RX = R_X.copy()
+        n = RX.shape[0]
+        eps = 1.0
+
+        for i in range (self.N - r_Sigma):
+            q = r_Sigma + i + 1
+            theta = sqrt(q) / (sqrt(q) - eps)
+            
+            # Construction de la matrice Q_eps
+            Q_eps = np.full((q, q), -theta / q)
+            for j in range(q):
+                Q_eps[j, j] = 1 - theta / q
+            Q_eps[0, :] = eps / sqrt(q)
+            Q_eps[:, 0] = eps / sqrt(q)
+
+            # Création de W
             zeros_col = zeros((n, 1))
             W = np.hstack([zeros_col, RX])
 
+            # Génération d'une matrice de rotation aléatoire
+            Q_rand = genOG_1(q)
+
+            # Application de la rotation
             RX = W @ Q_eps @ Q_rand
         
         return RX
@@ -191,12 +220,9 @@ class KETKF(da_method):
             if kObs is None: 
                 continue
                 
-            if t <= 365.0:
-                """print(
-                    "||A|| =", np.linalg.norm(E - np.mean(E, axis=0)),
-                    "spread =", np.mean(np.std(E, axis=0)))"""
+            """if t <= 365.0:
                 self.stats.assess(k, kObs, 'a', E=E)
-                continue
+                continue"""
 
             # observation
             y = yy[kObs] 
@@ -327,13 +353,25 @@ class KETKF(da_method):
             # si log transform ----------------------------------------------------
             if self.log_transform:
                 # E_ana est dans l'espace log, on le ramène en physique
-                E = np.exp(np.clip(E_analyse, -50, 50)) 
+                E_analyse = np.exp(np.clip(E_analyse, -50, 50)) 
             elif self.truncated:
                 # E_ana est déjà en physique, on tronque juste les négatifs
-                E = np.maximum(E_analyse, 1e-20)
+                E_analyse = np.maximum(E_analyse, 1e-20)
 
             # inflation pour éviter les ensemble collapse
             #E = inflate_ens(E, self.infl)
-            E = inflate_ens(E, lambda_infl)
+            E = inflate_ens(E_analyse, lambda_infl)
                 
             self.stats.assess(k, kObs, 'a', E=E)
+        """
+        print("\n" + "="*50)
+        print(" COMPOSITION DES MEMBRES DE L'ENSEMBLE (FIN DE SIMULATION)")
+        print("="*50)
+        
+        # E a pour forme (N_membres, n_variables)
+        for i, membre in enumerate(E):
+            print(f"Membre {i+1:02d} -> {membre}")
+            
+        print("="*50 + "\n")
+        
+        return self.stats"""

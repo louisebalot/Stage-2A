@@ -9,44 +9,47 @@ pb.disable_progbar = True
 
 xx, yy = HMM.simulate()
 
-
+"""
 masse_physique = np.sum(xx, axis=1)
 plt.plot(masse_physique)
 plt.title("Évolution de la masse totale dans la colonne")
-plt.show()
+plt.show()"""
 
 def nom_filtre(f):
     try:
         return "KETKF-" + f.kernel_type
     except AttributeError:
-        return "EnKF-Sqrt"
+        return "EnKF" + f.upd_a
     
 
 xps = dpr.xpList()
 
 N = 55
-infl = 1.01
+infl = 1.005
 
 # références
-xps += EnKF('Sqrt', N=N, infl=infl, rot=True)
-xps += KETKF(N=N, infl=infl, rot=True, kernel_type='linear')
-xps += KETKF(N=N, infl=infl, rot=True, kernel_type='linear', log_transform=True)
+xps += EnKF('Sqrt', N=N, infl=infl, rot=True, truncated=True)
+#xps += EnKF('PertObs', N=N, infl=infl, rot=False, truncated=True),
+xps += EnKF('DEnKF', N=N, infl=infl, rot=True, truncated=True),
 
+#xps += KETKF(N=N, infl=infl, rot=True, kernel_type='linear', truncated=True)
+xps += KETKF(N=N, infl=infl, rot=True, kernel_type='linear', log_transform=True)
+"""
 # tests
-xps += KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=0.01 , reg_tikhonov=1e-3)
+xps += KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=0.01 , reg_tikhonov=1e-3, truncated=True)
 xps += KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=0.01 , reg_tikhonov=1e-3, log_transform=True)
 
-xps += KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-3)
+xps += KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-3, truncated=True)
 xps += KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-3, log_transform=True)
 
-xps += KETKF(N=N, infl=infl, rot=True, kernel_type='lap', reg_tikhonov=1e-3)
+xps += KETKF(N=N, infl=infl, rot=True, kernel_type='lap', reg_tikhonov=1e-3, truncated=True)
 xps += KETKF(N=N, infl=infl, rot=True, kernel_type='lap', reg_tikhonov=1e-3, log_transform=True)
 
-xps += KETKF(N=N, infl=infl, rot=True, kernel_type='rbf_exp', sigma_rbf=15.0, reg_tikhonov=0.1)
+xps += KETKF(N=N, infl=infl, rot=True, kernel_type='rbf_exp', sigma_rbf=15.0, reg_tikhonov=0.1, truncated=True)
 
-xps += KETKF(N=N, infl=infl, rot=True, kernel_type='rbf', sigma_rbf=15.0, reg_tikhonov=0.1)
+xps += KETKF(N=N, infl=infl, rot=True, kernel_type='rbf', sigma_rbf=15.0, reg_tikhonov=0.1, truncated=True)
 
-xps += KETKF(N=N, infl=infl, rot=True, kernel_type='polynomial', poly_degree=1, reg_tikhonov=1e-2)
+xps += KETKF(N=N, infl=infl, rot=True, kernel_type='polynomial', poly_degree=1, reg_tikhonov=1e-2, truncated=True)"""
 
 #xps.launch(HMM_log, liveplots=False, save_as=False)
 print(f"Simulation lancée avec N = {N}, et inflation = {infl}")
@@ -77,9 +80,8 @@ for xp in xps:
 
     params_str = ", ".join(params)
 
-    """
     if hasattr(xp, 'rang_history'):
-        delattr(xp, 'rang_history')"""
+        delattr(xp, 'rang_history')
     
     print(f"{nom:<25} | {rmse_moyenne:<15.4g} | {rmv_moyenne:<15.4g} | {params_str:<42} | {log_transform}")
 

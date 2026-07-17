@@ -2,14 +2,24 @@ import numpy as np
 import dapper.mods as modelling
 
 # constantes biologiques
+"""
 mu_max = 0.9        # taux croissance max phytoplancton
 K_N = 0.5           # gradualité de la croissance des nutriments
 g_max = 1.0         # taux broutage max zooplancton
 K_P = 1.0           # influence prédation pour phytoplancton
-m_P = 0.15          # taux mortalité linéaire phytoplancton
-m_Z = 0.10          # taux mortalité linéaire zooplancton
+m_P = 0.07          # taux mortalité linéaire phytoplancton
+m_Z = 0.07          # taux mortalité linéaire zooplancton
 beta = 0.5          # efficacité assimilation zooplancton (transformé en biomasse)
 gamma_Z = 0.05      # taux excretion, recyclage nutriments par zooplancton
+"""
+mu_max = 1.0
+K_N = 0.5
+g_max = 2.0
+K_P = 0.5
+m_P = 0.1
+m_Z = 0.2
+beta = 0.6
+gamma_Z = 0.1
 
 P_seuil = 0.1       # Seuil de broutage (Grazing threshold)
 N_deep = 10.0       # Réserve infinie de nutriments au fond
@@ -54,7 +64,9 @@ x0_1D = np.concatenate([N0, P0, Z0])
 # 0D
 @modelling.ens_compatible
 def dxdt(x, t):
-
+    """
+    Calcule les dérivées [dN/dt, dP/dt, dZ/dt] selon le modèle NPZ
+    """
     x = np.maximum(x, 1e-8)
     N, P, Z = x
     

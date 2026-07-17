@@ -32,5 +32,9 @@ xps += KETKF(N=N, infl=1.01, rot=True, kernel_type='rbf', sigma_rbf=0.5, reg_tik
 
 xps.launch(HMM, liveplots=False)
 
+for xp in xps:
+    if hasattr(xp, 'rang_history'):
+        delattr(xp, 'rang_history')
+
 print(f"Simulation lancée avec N = {N}")
 print(xps.tabulate_avrgs(["rmse.a", "rmv.a"]))

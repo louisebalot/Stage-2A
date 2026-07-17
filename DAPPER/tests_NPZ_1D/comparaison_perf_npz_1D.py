@@ -1,7 +1,7 @@
 import dapper as dpr
 import pandas as pd
 import numpy as np
-from dapper.mods.NPZ.settings_1D import HMM_physique, HMM_log
+from dapper.mods.NPZ.settings_1D import HMM
 from dapper.da_methods import EnKF, KETKF
 import time
 import os
@@ -12,24 +12,33 @@ pb.disable_progbar = True
 n_simulations = 10
 results_list = []
 
-N = 50
-infl = 1.05
+N = 55
+infl = 1.005
 
 def creer_filtres():
-    return [EnKF('Sqrt', N=N, infl=1.01, rot=True),
-    KETKF(N=N, infl=infl, rot=True, kernel_type='linear'),
-    KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=0.01, reg_tikhonov=1e-3),
-    KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-3),
-    KETKF(N=N, infl=infl, rot=True, kernel_type='polynomial', poly_degree=1, reg_tikhonov=1e-2),
+    return [EnKF('Sqrt', N=N, infl=infl, rot=True, truncated=True),
+    EnKF('Sqrt', N=N, infl=infl, rot=True, log_transform=True),
+    #EnKF('PertObs', N=N, infl=infl, rot=False, truncated=True),
+    EnKF('DEnKF', N=N, infl=infl, rot=True, truncated=True),
+    EnKF('DEnKF', N=N, infl=infl, rot=True, log_transform=True),
+    KETKF(N=N, infl=infl, rot=True, kernel_type='linear', truncated=True),
+    KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=0.01, reg_tikhonov=1e-3, truncated=True),
+    KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-3, truncated=True),
+    KETKF(N=N, infl=infl, rot=True, kernel_type='lap', reg_tikhonov=1e-3, truncated=True),
+    KETKF(N=N, infl=infl, rot=True, kernel_type='linear', log_transform=True),
+    KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=0.01, reg_tikhonov=1e-3, log_transform=True),
+    KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-3, log_transform=True),
+    KETKF(N=N, infl=infl, rot=True, kernel_type='lap', reg_tikhonov=1e-3, log_transform=True)]
+    #KETKF(N=N, infl=infl, rot=True, kernel_type='polynomial', poly_degree=1, reg_tikhonov=1e-2, truncated=True),
     #KETKF(N=N, infl=infl, rot=True, kernel_type='rbf_exp', sigma_rbf=0.25, reg_tikhonov=1e-3),
     #KETKF(N=N, infl=infl, rot=True, kernel_type='rbf', sigma_rbf=0.5, reg_tikhonov=1e-3),
-    KETKF(N=N, infl=infl, rot=True, kernel_type='lap', reg_tikhonov=1e-3)]
+    
 
 def nom_filtre(f):
     try:
-        return "KETKF-" + f.kernel_type
+        return "KETKF-" + f.kernel_type + " -- log_transform = " + str(f.log_transform)
     except AttributeError:
-        return "EnKF-Sqrt"
+        return "EnKF-" + f.upd_a + " -- log_transform = " + str(f.log_transform)
 
 noms = [nom_filtre(f) for f in creer_filtres()]
 
@@ -41,16 +50,14 @@ times = {nom: [] for nom in noms}
 for k in range(n_simulations):
     print(f"Simulation {k+1}/{n_simulations}")
 
-    #xx, yy = HMM.simulate()
-    xx_phys, yy_phys = HMM_physique.simulate()
-    xx_pour_stats = np.log(np.maximum(xx_phys, 1e-20))
+    xx, yy = HMM.simulate()
 
     for f in creer_filtres():
 
         nom = nom_filtre(f)
         t0 = time.time()
         #xps.launch(HMM, liveplots=False, save_as=False)
-        f.assimilate(HMM_log, xx_pour_stats, yy_phys, liveplots=False)
+        f.assimilate(HMM, xx, yy, liveplots=False)
         t1 = time.time()
         
         val_rmse = np.nanmean(f.stats.err.rms.a)
