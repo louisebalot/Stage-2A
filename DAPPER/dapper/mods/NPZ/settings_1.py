@@ -6,11 +6,11 @@ from dapper.mods.NPZ import step, x0
 # dt = pas d'intégration de RK4
 # dko = observation tous les dko pas
 # Ko = nombre observations total
-tseq = modelling.Chronology(dt=0.1, dko=100, Ko=300, BurnIn=0)
+tseq = modelling.Chronology(dt=0.1, dko=10, Ko=1825, BurnIn=0)
+tseq = modelling.Chronology(dt=0.1, dko=5, Ko=2920, BurnIn=730)
 
 Nx = len(x0) # Nx = 3 (N, P, Z)
 
-# noise=0 -> modèle déterministe (sans erreur aléatoire cachée)
 Dyn = modelling.Operator(M=Nx, model=step, noise=0)
 
 # État initial incertain (X0)

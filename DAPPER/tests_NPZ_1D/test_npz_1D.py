@@ -19,7 +19,7 @@ def nom_filtre(f):
     try:
         return "KETKF-" + f.kernel_type
     except AttributeError:
-        return "EnKF" + f.upd_a
+        return "EnKF-" + f.upd_a
     
 
 xps = dpr.xpList()
@@ -34,7 +34,7 @@ xps += EnKF('DEnKF', N=N, infl=infl, rot=True, truncated=True),
 
 #xps += KETKF(N=N, infl=infl, rot=True, kernel_type='linear', truncated=True)
 xps += KETKF(N=N, infl=infl, rot=True, kernel_type='linear', log_transform=True)
-"""
+
 # tests
 xps += KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=0.01 , reg_tikhonov=1e-3, truncated=True)
 xps += KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=0.01 , reg_tikhonov=1e-3, log_transform=True)
@@ -49,7 +49,7 @@ xps += KETKF(N=N, infl=infl, rot=True, kernel_type='rbf_exp', sigma_rbf=15.0, re
 
 xps += KETKF(N=N, infl=infl, rot=True, kernel_type='rbf', sigma_rbf=15.0, reg_tikhonov=0.1, truncated=True)
 
-xps += KETKF(N=N, infl=infl, rot=True, kernel_type='polynomial', poly_degree=1, reg_tikhonov=1e-2, truncated=True)"""
+xps += KETKF(N=N, infl=infl, rot=True, kernel_type='polynomial', poly_degree=1, reg_tikhonov=1e-2, truncated=True)
 
 #xps.launch(HMM_log, liveplots=False, save_as=False)
 print(f"Simulation lancée avec N = {N}, et inflation = {infl}")
@@ -63,10 +63,6 @@ for xp in xps:
     
     rmse_moyenne = np.nanmean(xp.stats.err.rms.a)
     rmv_moyenne = np.nanmean(xp.stats.spread.rms.a)
-
-    log_transform = False
-    if nom!="EnKF-Sqrt":
-        log_transform = xp.log_transform
 
     params = []
     if hasattr(xp, 'reg_tikhonov'):
@@ -83,6 +79,6 @@ for xp in xps:
     if hasattr(xp, 'rang_history'):
         delattr(xp, 'rang_history')
     
-    print(f"{nom:<25} | {rmse_moyenne:<15.4g} | {rmv_moyenne:<15.4g} | {params_str:<42} | {log_transform}")
+    print(f"{nom:<25} | {rmse_moyenne:<15.4g} | {rmv_moyenne:<15.4g} | {params_str:<42} | {str(xp.log_transform)}")
 
 #print(xps.tabulate_avrgs(['rmse.a', 'rmv.a'])

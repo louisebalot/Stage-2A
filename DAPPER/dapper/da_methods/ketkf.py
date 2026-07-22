@@ -21,7 +21,7 @@ class KETKF(da_method):
     rot: bool       # Rotation aléatoire
 
     # pour le kernel
-    kernel_type: str         # 'linear', 'polynomial', 'sigmoid', 'rbf', 'rbf_exp' ou 'hyperbolique'
+    kernel_type: str         # 'linear', 'polynomial', 'sigmoid', 'rbf', 'rbf_exp' ou 'hyperbolique', ...
     poly_degree: int = 2     # Degré du noyau polynomial
     sigma_rbf: float = 1.0   # Pour les noyaux basés sur la distance
     c_tanh: float = 1.0      # Pour le tanh
@@ -29,7 +29,7 @@ class KETKF(da_method):
 
     log_transform: bool = False
     truncated: bool = False
-
+    
     def phi_poincare(self, X):
         coef = sqrt(self.c_tanh) * np.linalg.norm(X, axis=1, keepdims=True)
 
@@ -130,6 +130,7 @@ class KETKF(da_method):
             
         return RX 
     """
+
     def rotation_farchi_bocquet(self, R_X, r_Sigma):
         
         # Cas r_Sigma < N 
@@ -196,8 +197,8 @@ class KETKF(da_method):
         else:
             RX = A_tilde[:, :self.N]
             
-        return RX
-    
+        return RX   
+
 
     def assimilate(self, HMM, xx, yy):
         self.stats = dpr.stats.Stats(self, HMM, xx, yy)

@@ -1,18 +1,36 @@
 import dapper as dpr
-import pandas as pd
 import numpy as np
-from dapper.da_methods import EnKF, KETKF
-import time
-import dapper.mods.Lorenz63.sakov2012 as L63
+from dapper.da_methods import EnKF
+from dapper.da_methods import KETKF
+import dapper.mods as modelling
+from dapper.mods.Lorenz96 import step, x0, dstep_dx
+from dapper.mods import Chronology
 import dapper.tools.progressbar as pb
 pb.disable_progbar = True
+import time
+import pandas as pd
+M = 40 
 
-HMM = L63.HMM
+Dyn = modelling.Operator(M=M, model=step, linear=dstep_dx, noise=0)
 
-n_simulations = 10
-results_list = []
+jj = np.arange(0, M, 2) 
+Obs = modelling.Operator(
+    **modelling.partial_Id_Obs(M, jj),
+    noise=0.1 
+)
 
-N = 15
+tseq = modelling.Chronology(dt=0.05, K=500, dto=0.05)
+
+# 5. État initial probabiliste
+X0 = modelling.GaussRV(mu=x0(M), C=0.001)
+
+HMM = modelling.HiddenMarkovModel(Dyn, Obs, tseq, X0)
+
+# vraie trajectoire (xx) et observations bruitées (yy)
+xx, yy = HMM.simulate()
+
+N = 40
+n_simulations = 30
 infl = 1.02
 
 def creer_filtres():

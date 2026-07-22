@@ -9,11 +9,11 @@ from contextlib import redirect_stdout
 import dapper.tools.progressbar as pb
 pb.disable_progbar = True
 
-n_simulations = 10
+n_simulations = 20
 results_list = []
 
 N = 55
-infl = 1.005
+infl = 1.01
 
 def creer_filtres():
     return [EnKF('Sqrt', N=N, infl=infl, rot=True, truncated=True),

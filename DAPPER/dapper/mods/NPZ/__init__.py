@@ -2,7 +2,7 @@ import numpy as np
 import dapper.mods as modelling
 
 # constantes biologiques
-"""
+
 mu_max = 0.9        # taux croissance max phytoplancton
 K_N = 0.5           # gradualité de la croissance des nutriments
 g_max = 1.0         # taux broutage max zooplancton
@@ -11,6 +11,7 @@ m_P = 0.07          # taux mortalité linéaire phytoplancton
 m_Z = 0.07          # taux mortalité linéaire zooplancton
 beta = 0.5          # efficacité assimilation zooplancton (transformé en biomasse)
 gamma_Z = 0.05      # taux excretion, recyclage nutriments par zooplancton
+
 """
 mu_max = 1.0
 K_N = 0.5
@@ -20,12 +21,43 @@ m_P = 0.1
 m_Z = 0.2
 beta = 0.6
 gamma_Z = 0.1
-
-P_seuil = 0.1       # Seuil de broutage (Grazing threshold)
-N_deep = 10.0       # Réserve infinie de nutriments au fond
+"""
 
 # État initial [N, P, Z]
-x0 = np.array([2.0, 0.5, 0.1])
+x0 = np.array([10.0, 0.1, 0.1])
+
+# 0D
+@modelling.ens_compatible
+def dxdt(x, t):
+    
+    # Calcule les dérivées [dN/dt, dP/dt, dZ/dt] selon le modèle NPZ
+
+    x = np.maximum(x, 1e-8)
+    N, P, Z = x
+
+    # simulation cycles
+    T_saison = 365 
+    saison = 0.5 * (1 - np.cos(2 * np.pi * t / T_saison))
+    mu_saisonnier = mu_max * (0.2 + 0.8 * saison)
+
+    mu_P = mu_saisonnier * (N / (K_N + N))
+    g_Z = g_max * (P / (K_P + P))
+
+    # Équations
+    dN = -mu_P * P + gamma_Z * Z + m_P * P + m_Z * Z + (1 - beta) * g_Z * Z
+    dP = mu_P * P - g_Z * Z - m_P * P
+    dZ = beta * g_Z * Z - m_Z * Z - gamma_Z * Z
+
+    return np.array([dN, dP, dZ])
+
+rk4_step = modelling.with_rk4(dxdt, autonom=False)
+
+def step(x0, t0, dt):
+    x_new = rk4_step(x0, t0, dt)
+    return np.maximum(x_new, 1e-8)
+
+
+##### colonne d'eau 1D en Z
 
 ## constances physiques
 M = 20              # Nombre de couches
@@ -34,6 +66,9 @@ dz = depth / M      # épaisseur couche
 # Kz = 0.7          # coefficient de diffusion verticale fixe (changé!)
 k_ext = 0.02        # Coefficient d'atténuation de la lumière
 z_levels = np.linspace(0, depth, M) # Profondeurs de chaque couche
+
+P_seuil = 0.1       # Seuil de broutage (Grazing threshold)
+N_deep = 10.0       # Réserve infinie de nutriments au fond
 
 # paramètres de diffusion
 Kzb = 0.1           # Diffusion au fond (stratifié, calme)
@@ -60,41 +95,6 @@ N0 = np.full(M, 10.0)
 P0 = np.full(M, 0.1)
 Z0 = np.full(M, 0.1) 
 x0_1D = np.concatenate([N0, P0, Z0])
-
-# 0D
-@modelling.ens_compatible
-def dxdt(x, t):
-    """
-    Calcule les dérivées [dN/dt, dP/dt, dZ/dt] selon le modèle NPZ
-    """
-    x = np.maximum(x, 1e-8)
-    N, P, Z = x
-    
-    # simulation cycles
-    T_saison = 1000 
-    # Onde sinusoïdale qui oscille entre 0 (Hiver) et 1 (Été)
-    saison = 0.5 * (1 + np.sin(2 * np.pi * t / T_saison))
-    # Le taux de croissance varie de 20% en hiver à 100% en été
-    mu_saisonnier = mu_max * (0.2 + 0.8 * saison)
-
-    mu_P = mu_saisonnier * (N / (K_N + N))
-    g_Z = g_max * (P / (K_P + P))
-    
-    # Équations
-    dN = -mu_P * P + gamma_Z * Z + m_P * P + m_Z * Z + (1 - beta) * g_Z * Z
-    dP = mu_P * P - g_Z * Z - m_P * P
-    dZ = beta * g_Z * Z - m_Z * Z - gamma_Z * Z
-    
-    return np.array([dN, dP, dZ])
-
-rk4_step = modelling.with_rk4(dxdt, autonom=False)
-
-def step(x0, t0, dt):
-    x_new = rk4_step(x0, t0, dt)
-    return np.maximum(x_new, 1e-8)
-
-
-##### colonne d'eau 1D en Z
 
 # version adaptée fortran
 @modelling.ens_compatible
@@ -134,7 +134,6 @@ def dxdt_1D(x_flat, t):
 
 
 rk4_step_1D = modelling.with_rk4(dxdt_1D, autonom=False)
-
 
 def step_1D(etat_precedent, t, dt, M, dz):
     """
@@ -187,4 +186,3 @@ def step_1D(etat_precedent, t, dt, M, dz):
         x_bio_finale[:, 2, -1] = 0.0
             
         return np.maximum(x_bio_finale, 1e-8).reshape(nb_membres, -1)
-    

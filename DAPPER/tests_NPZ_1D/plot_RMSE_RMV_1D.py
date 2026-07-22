@@ -12,18 +12,18 @@ xx, yy = HMM.simulate()
 t_obs = HMM.tseq.tt[HMM.tseq.dko :: HMM.tseq.dko]
 
 N = 50
-infl = 1.01
+infl = 1.04
 
 def creer_filtres():
     return [
-        EnKF('Sqrt', N=N, infl=infl, rot=True),
-        KETKF(N=N, infl=infl, rot=True, kernel_type='linear', log_transform=False),
-        #KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=0.01, reg_tikhonov=1e-3, log_transform=True),
-        #KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-2, log_transform=True),
+        EnKF('Sqrt', N=N, infl=1.001, rot=True, truncated=True),
+        KETKF(N=N, infl=1.001, rot=True, kernel_type='linear', log_transform=True),
+        KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=0.1, reg_tikhonov=1e-3, log_transform=True),
+        KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-2, log_transform=True),
         #KETKF(N=N, infl=infl, rot=True, kernel_type='polynomial', poly_degree=1, reg_tikhonov=1e-2),
         #KETKF(N=N, infl=infl, rot=True, kernel_type='rbf_exp', sigma_rbf=0.25, reg_tikhonov=1e-3),
         #KETKF(N=N, infl=infl, rot=True, kernel_type='rbf', sigma_rbf=0.5, reg_tikhonov=1e-3),
-        #KETKF(N=N, infl=infl, rot=True, kernel_type='lap', reg_tikhonov=1e-3, log_transform=True)
+        KETKF(N=N, infl=infl, rot=True, kernel_type='lap', reg_tikhonov=1e-3, log_transform=True)
     ]
 
 def nom_filtre(f):
@@ -119,6 +119,7 @@ fig.add_hline(y=N, row=5, col=1, line_dash="dash", line_color="gray",
               annotation_text=f"N={N}", annotation_position="top left")
 
 fig.update_xaxes(title_text="Temps (Jours)", row=5, col=1)
+fig.update_xaxes(title_text="Temps (Jours)", row=3, col=1, showticklabels=True, ticks="outside")
 fig.update_yaxes(title_text="RMSE Nutriments", row=1, col=1)
 fig.update_yaxes(title_text="RMSE Phytoplancton", row=2, col=1)
 fig.update_yaxes(title_text="RMSE Zooplancton", row=3, col=1)
