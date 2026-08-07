@@ -51,13 +51,21 @@ class KETKF(da_method):
         if self.kernel_type == 'linear':
             return X @ Y.T
         
-        elif self.kernel_type == 'polynomial':
-            prod = X @ Y.T
-            return (1.0 + prod) ** self.poly_degree
-        
-        elif self.kernel_type == 'sigmoid':
-            prod = X @ Y.T
-            return np.tanh(self.c_tanh * prod)
+        elif self.kernel_type in ['polynomial', 'sigmoid']:
+            # Projection sur la sphère unité pour forcer le produit dans [-1, 1]
+            norm_X = np.linalg.norm(X, axis=1, keepdims=True)
+            norm_Y = np.linalg.norm(Y, axis=1, keepdims=True)
+            
+            X_scaled = X / np.maximum(norm_X, 1e-12)
+            Y_scaled = Y / np.maximum(norm_Y, 1e-12)
+            
+            prod = X_scaled @ Y_scaled.T
+            
+            if self.kernel_type == 'polynomial':
+                return (1.0 + prod) ** self.poly_degree
+            
+            else:  # sigmoid
+                return np.tanh(self.c_tanh * prod)
         
         else:  # scaler 
             std_X = np.std(X, axis=1, keepdims=True) + 1e-8
@@ -100,36 +108,6 @@ class KETKF(da_method):
             
             else :
                 raise ValueError("Le noyau doit être 'linear', 'polynomial', 'sigmoid', 'hyperbolique', 'rbf', 'rbf_exp' ou 'lap'")
-
-    """
-    def rotation_farchi_bocquet(self, R_X, r_Sigma):
-        
-        #Cas r_Sigma < N
-
-        RX = R_X.copy()
-        n = RX.shape[0]
-        eps = 1.0
-
-        def matrice_pattern(q, theta):
-            mat = np.full((q, q), -theta / q)
-            for i in range (q):
-                mat[i][i]= 1-theta/q
-                mat[0][i]= eps/(sqrt(q))
-                mat[i][0]= eps/(sqrt(q))
-            return mat
-
-        for i in range (self.N - r_Sigma):
-            q = r_Sigma + i+1
-            theta = sqrt(q)/(sqrt(q)-eps)
-
-            Q_eps = matrice_pattern(q, theta)
-            zeros_col = zeros((n, 1))
-            W = np.hstack([zeros_col, RX])
-            RX = W @ Q_eps
-
-            
-        return RX 
-    """
 
     def rotation_farchi_bocquet(self, R_X, r_Sigma):
         
@@ -250,6 +228,7 @@ class KETKF(da_method):
             R = Obs_op.noise.C.full
 
             # inflation adaptative --------------
+            """
             # innovation
             d = y - mu_f_obs
             
@@ -266,7 +245,7 @@ class KETKF(da_method):
             else:
                 lambda_infl = 1.0
                 
-            lambda_infl = np.clip(lambda_infl, 1.0, self.infl)
+            lambda_infl = np.clip(lambda_infl, 1.0, self.infl)"""
             # ----
 
             # Décomposition en valeurs propres de R
@@ -360,19 +339,7 @@ class KETKF(da_method):
                 E_analyse = np.maximum(E_analyse, 1e-20)
 
             # inflation pour éviter les ensemble collapse
-            #E = inflate_ens(E, self.infl)
-            E = inflate_ens(E_analyse, lambda_infl)
+            E = inflate_ens(E_analyse, self.infl)
+            #E = inflate_ens(E_analyse, lambda_infl)
                 
             self.stats.assess(k, kObs, 'a', E=E)
-        """
-        print("\n" + "="*50)
-        print(" COMPOSITION DES MEMBRES DE L'ENSEMBLE (FIN DE SIMULATION)")
-        print("="*50)
-        
-        # E a pour forme (N_membres, n_variables)
-        for i, membre in enumerate(E):
-            print(f"Membre {i+1:02d} -> {membre}")
-            
-        print("="*50 + "\n")
-        
-        return self.stats"""

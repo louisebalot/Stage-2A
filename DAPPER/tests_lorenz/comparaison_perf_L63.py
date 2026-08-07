@@ -9,10 +9,10 @@ pb.disable_progbar = True
 
 HMM = L63.HMM
 
-n_simulations = 10
+n_simulations = 15
 results_list = []
 
-N = 15
+N = 5
 infl = 1.02
 
 def creer_filtres():
@@ -21,13 +21,20 @@ def creer_filtres():
     KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=0.01, reg_tikhonov=1e-3, truncated=False),
     KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-3, truncated=False),
     KETKF(N=N, infl=infl, rot=True, kernel_type='polynomial', poly_degree=1, reg_tikhonov=1e-2, truncated=False),
+    KETKF(N=N, infl=infl, rot=True, kernel_type='polynomial', poly_degree=2, reg_tikhonov=1e-2, truncated=False),
+    KETKF(N=N, infl=infl, rot=True, kernel_type='polynomial', poly_degree=3, reg_tikhonov=1e-2, truncated=False),
+    KETKF(N=N, infl=infl, rot=True, kernel_type='polynomial', poly_degree=4, reg_tikhonov=1e-2, truncated=False),
+    KETKF(N=N, infl=infl, rot=True, kernel_type='polynomial', poly_degree=8, reg_tikhonov=1e-2, truncated=False),
     KETKF(N=N, infl=infl, rot=True, kernel_type='rbf_exp', sigma_rbf=0.25, reg_tikhonov=1e-3, truncated=False),
     KETKF(N=N, infl=infl, rot=True, kernel_type='rbf', sigma_rbf=0.5, reg_tikhonov=1e-3, truncated=False),
     KETKF(N=N, infl=infl, rot=True, kernel_type='lap', reg_tikhonov=1e-3)]
 
 def nom_filtre(f):
     try:
-        return "KETKF-" + f.kernel_type
+        if f.kernel_type == "polynomial":
+           return "KETKF-" + f.kernel_type + str(f.poly_degree)
+        else:
+            return "KETKF-" + f.kernel_type
     except AttributeError:
         return "EnKF-Sqrt"
 
