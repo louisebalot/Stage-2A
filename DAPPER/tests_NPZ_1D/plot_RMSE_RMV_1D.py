@@ -11,19 +11,19 @@ xx, yy = HMM.simulate()
 
 t_obs = HMM.tseq.tt[HMM.tseq.dko :: HMM.tseq.dko]
 
-N = 50
+N = 55
 infl = 1.04
 
 def creer_filtres():
     return [
         EnKF('Sqrt', N=N, infl=1.001, rot=True, truncated=True),
-        KETKF(N=N, infl=1.001, rot=True, kernel_type='linear', log_transform=True),
-        KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=0.1, reg_tikhonov=1e-3, log_transform=True),
-        KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-2, log_transform=True),
+        KETKF(N=N, infl=1.01, rot=True, kernel_type='linear', reg_tikhonov=1e-4, log_transform=True),
+        KETKF(N=N, infl=1.01, rot=True, kernel_type='sigmoid', c_tanh=0.001, reg_tikhonov=1e-3, log_transform=True),
+        KETKF(N=N, infl=1.001, rot=True, kernel_type='hyperbolique', c_tanh=1e-4, reg_tikhonov=1e-4, log_transform=True),
         #KETKF(N=N, infl=infl, rot=True, kernel_type='polynomial', poly_degree=1, reg_tikhonov=1e-2),
         #KETKF(N=N, infl=infl, rot=True, kernel_type='rbf_exp', sigma_rbf=0.25, reg_tikhonov=1e-3),
         #KETKF(N=N, infl=infl, rot=True, kernel_type='rbf', sigma_rbf=0.5, reg_tikhonov=1e-3),
-        KETKF(N=N, infl=infl, rot=True, kernel_type='lap', reg_tikhonov=1e-3, log_transform=True)
+        KETKF(N=N, infl=1.01, rot=True, kernel_type='lap', reg_tikhonov=1e-2, log_transform=True)
     ]
 
 def nom_filtre(f):

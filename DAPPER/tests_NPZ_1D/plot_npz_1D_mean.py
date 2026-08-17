@@ -9,13 +9,12 @@ import dapper.tools.progressbar as pb
 pb.disable_progbar = True
 xx, yy = HMM.simulate()
 
-N = 50
-infl = 1.02
-enkf = EnKF('Sqrt', N=N, infl=1.01, rot=True, log_transform=True)
-ketkf_lin = KETKF(N=N, kernel_type='linear', infl=infl, rot=True, reg_tikhonov=1e-10, log_transform=True)
-ketkf_hyp  = KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=1e-3, reg_tikhonov=1e-3, log_transform=True)
-ketkf_sig = KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=0.01 , reg_tikhonov=1e-3, log_transform=True)
-ketkf_lap = KETKF(N=N, infl=infl, rot=True, kernel_type='lap', reg_tikhonov=1e-3, log_transform=True)
+N = 55
+enkf = EnKF('Sqrt', N=N, infl=1.001, rot=True, truncated=True)
+ketkf_lin = KETKF(N=N, kernel_type='linear', infl=1.01, rot=True, reg_tikhonov=1e-4, log_transform=True)
+ketkf_hyp  = KETKF(N=N, infl=1.001, rot=True, kernel_type='hyperbolique', c_tanh=1e-4, reg_tikhonov=1e-4, log_transform=True)
+ketkf_sig = KETKF(N=N, infl=1.01, rot=True, kernel_type='sigmoid', c_tanh=0.001 , reg_tikhonov=1e-3, log_transform=True)
+ketkf_lap = KETKF(N=N, infl=1.01, rot=True, kernel_type='lap', reg_tikhonov=1e-2, log_transform=True)
 
 
 enkf.assimilate(HMM, xx, yy, liveplots=False)
