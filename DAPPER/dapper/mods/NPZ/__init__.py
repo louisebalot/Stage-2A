@@ -110,12 +110,8 @@ def dxdt_1D(x_flat, t):
     mu_saisonnier = mu_max * (0.2 + 0.8 * saison)
 
     # Auto-ombrage - Self-shading : calcul de la biomasse cumulée au-dessus
-    P_cumul = np.cumsum(P_conc, axis=0)
-    P_moy_au_dessus = P_cumul / (np.arange(M).reshape(M, 1) + 1)
-    
     # k_ext = atténuation de l'eau, k_self = coefficient d'auto-ombrage
     k_self = 0.05 
-    #lumiere = np.exp(-k_ext * z_levels.reshape(M, 1) - k_self * P_moy_au_dessus)
     P_int = dz * np.cumsum(P_conc, axis=0)
 
     lumiere = np.exp(-k_ext * z_levels.reshape(M,1)-k_self * P_int)
@@ -124,7 +120,6 @@ def dxdt_1D(x_flat, t):
     # Le Zooplancton ne mange plus si P < P_seuil
     P_eff = np.maximum(P_conc - P_seuil, 0.0)
     g_Z = g_max * (P_eff / (K_P + P_eff))
-    #g_Z = g_max * (P_conc / (K_P + P_conc))
     
     dN = -mu_P * P_conc + gamma_Z * Z_conc + m_P * P_conc + m_Z * Z_conc + (1 - beta) * g_Z * Z_conc
     dP = mu_P * P_conc - g_Z * Z_conc - m_P * P_conc

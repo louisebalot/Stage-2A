@@ -25,7 +25,7 @@ ketkf_lap.assimilate(HMM, xx, yy, liveplots=False)
 
 time_truth = HMM.tseq.tt 
 truth = xx
-# liste[début : fin : pas]
+
 time_analysis = HMM.tseq.tt[HMM.tseq.dko :: HMM.tseq.dko]
 
 mu_enkf = enkf.stats.mu.a

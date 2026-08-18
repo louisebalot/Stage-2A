@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import numpy as np
 import scipy.linalg as sla
 from scipy.spatial.distance import cdist
-from numpy import diag, eye, sqrt, zeros, ones, mean, std 
+from numpy import diag, eye, sqrt, zeros, ones, mean
 from dapper.tools.matrices import genOG_1
 
 import dapper as dpr
@@ -183,7 +183,6 @@ class KETKF(da_method):
         
         # Tirage de l'ensemble initial a priori
         E = HMM.X0.sample(self.N)
-        #E = np.maximum(E, 1e-20)
         
         # Dimension modèle
         n = E.shape[1]
@@ -193,15 +192,10 @@ class KETKF(da_method):
         for k, kObs, t, dt in progbar(HMM.tseq.ticker):
             # prévision
             E = HMM.Dyn(E, t - dt, dt)
-            #E = np.maximum(E, 1e-20)
             self.stats.assess(k, kObs, 'f', E=E)
             
             if kObs is None: 
                 continue
-                
-            """if t <= 365.0:
-                self.stats.assess(k, kObs, 'a', E=E)
-                continue"""
 
             # observation
             y = yy[kObs] 
@@ -226,27 +220,6 @@ class KETKF(da_method):
 
             # matrice de covariance de l'erreur d'observation R
             R = Obs_op.noise.C.full
-
-            # inflation adaptative --------------
-            """
-            # innovation
-            d = y - mu_f_obs
-            
-            d_var = np.sum(d**2)           # Erreur totale constatée dans la vraie vie
-            R_var = np.trace(R)            # Erreur théorique attendue du satellite
-            
-            # Variance de l'ensemble dans l'espace des observations
-            P_obs_var = np.trace((Y_f @ Y_f.T) / (self.N - 1)) 
-            
-            ratio = (d_var - R_var) / (P_obs_var + 1e-8)
-            
-            if ratio > 1.0:
-                lambda_infl = sqrt(ratio)  # racine car on compare des variances, et infl est ecart-type
-            else:
-                lambda_infl = 1.0
-                
-            lambda_infl = np.clip(lambda_infl, 1.0, self.infl)"""
-            # ----
 
             # Décomposition en valeurs propres de R
             val_p, vec_p = sla.eigh(R)
@@ -340,6 +313,5 @@ class KETKF(da_method):
 
             # inflation pour éviter les ensemble collapse
             E = inflate_ens(E_analyse, self.infl)
-            #E = inflate_ens(E_analyse, lambda_infl)
                 
             self.stats.assess(k, kObs, 'a', E=E)

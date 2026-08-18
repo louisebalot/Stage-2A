@@ -9,12 +9,6 @@ pb.disable_progbar = True
 
 xx, yy = HMM.simulate()
 
-"""
-masse_physique = np.sum(xx, axis=1)
-plt.plot(masse_physique)
-plt.title("Évolution de la masse totale dans la colonne")
-plt.show()"""
-
 def nom_filtre(f):
     try:
         return "KETKF-" + f.kernel_type

@@ -9,11 +9,11 @@ from contextlib import redirect_stdout
 import dapper.tools.progressbar as pb
 pb.disable_progbar = True
 
-n_simulations = 1
+n_simulations = 10
 results_list = []
 
 N = 55
-infl = 1.01
+#infl = 1.01
 """
 def creer_filtres():
     return [EnKF('Sqrt', N=N, infl=infl, rot=True, truncated=True),
@@ -43,62 +43,43 @@ def creer_filtres():
     for infl in inflations:
         for pos in positivites:
             
-            # ==========================================
-            # 1. FILTRES CLASSIQUES (EnKF, DEnKF, PertObs)
-            # ==========================================
+            # filtres classiques (EnKF, DEnKF, PertObs)
             filtres.append(EnKF('Sqrt', N=N, infl=infl, rot=True, **pos))
             filtres.append(EnKF('DEnKF', N=N, infl=infl, rot=True, **pos))
             filtres.append(EnKF('PertObs', N=N, infl=infl, rot=False, **pos))
 
-            # ==========================================
-            # 2. KETKF - NOYAU LINÉAIRE
-            # ==========================================
+            # linéaire
             for reg in [1e-4, 1e-3, 1e-2]:
                 filtres.append(KETKF(N=N, infl=infl, rot=True, kernel_type='linear', reg_tikhonov=reg, **pos))
 
-            # ==========================================
-            # 3. KETKF - NOYAU SIGMOÏDE
-            # ==========================================
+            # sigmoïde
             for c_tanh in [1e-3, 0.01, 0.1]:
                 for reg in [1e-4, 1e-3]:
                     filtres.append(KETKF(N=N, infl=infl, rot=True, kernel_type='sigmoid', c_tanh=c_tanh, reg_tikhonov=reg, **pos))
 
-            # ==========================================
-            # 4. KETKF - NOYAU HYPERBOLIQUE
-            # ==========================================
+            # hyperbolique
             for c_tanh in [1e-4, 1e-3, 1e-2]:
                 for reg in [1e-4, 1e-3]:
                     filtres.append(KETKF(N=N, infl=infl, rot=True, kernel_type='hyperbolique', c_tanh=c_tanh, reg_tikhonov=reg, **pos))
 
-            # ==========================================
-            # 5. KETKF - NOYAU LAPLACIEN
-            # ==========================================
+            # Laplacien
             for reg in [1e-4, 1e-3, 1e-2]:
                 filtres.append(KETKF(N=N, infl=infl, rot=True, kernel_type='lap', reg_tikhonov=reg, **pos))
 
-            # ==========================================
-            # 6. KETKF - NOYAUX RBF & RBF EXP
-            # ==========================================
+            # RBF
             for sigma in [0.1, 0.25, 0.5]:
                 for reg in [1e-4, 1e-3]:
                     filtres.append(KETKF(N=N, infl=infl, rot=True, kernel_type='rbf', sigma_rbf=sigma, reg_tikhonov=reg, **pos))
                     filtres.append(KETKF(N=N, infl=infl, rot=True, kernel_type='rbf_exp', sigma_rbf=sigma, reg_tikhonov=reg, **pos))
 
-            # ==========================================
-            # 7. KETKF - NOYAU POLYNOMIAL
-            # ==========================================
+            # Polynomial
             for degree in [1, 2, 3]:
                 for reg in [1e-3, 1e-2]:
                     filtres.append(KETKF(N=N, infl=infl, rot=True, kernel_type='polynomial', poly_degree=degree, reg_tikhonov=reg, **pos))
                     
     return filtres
-"""
-def nom_filtre(f):
-    try:
-        return "KETKF-" + f.kernel_type + " -- log_transform = " + str(f.log_transform)
-    except AttributeError:
-        return "EnKF-" + f.upd_a + " -- log_transform = " + str(f.log_transform)
-"""    
+
+
 def nom_filtre(f):
     if hasattr(f, 'kernel_type'):
         nom = f"KETKF-{f.kernel_type}"
@@ -145,17 +126,14 @@ for k in range(n_simulations):
         t0 = time.time()
         
         try:
-            # On tente l'assimilation
             f.assimilate(HMM, xx, yy, liveplots=False)
             t1 = time.time()
             
-            # Si ça passe, on récupère les stats
             val_rmse = np.nanmean(f.stats.err.rms.a)
             val_rmv  = np.nanmean(f.stats.spread.rms.a)
             temps_ecoule = t1 - t0
             
         except Exception as e:
-            # Si ça plante (LinAlgError, overflow, etc.)
             print(f"  [!] Le filtre {nom} a divergé/planté : {type(e).__name__}")
             val_rmse = np.nan
             val_rmv  = np.nan
@@ -186,9 +164,7 @@ df_trie = df.sort_values(by="RMSE moyen")
 print(f"\nRésultats moyennés sur {n_simulations} simulations, avec N = {N}")
 print(df_trie)
 
-# ==========================================
-# SAUVEGARDE DANS UN FICHIER TXT
-# ==========================================
+
 nom_fichier = "resultats_filtres.txt"
 with open(nom_fichier, "w", encoding="utf-8") as f:
     f.write(f"Résultats moyennés sur {n_simulations} simulations, avec N = {N}\n")

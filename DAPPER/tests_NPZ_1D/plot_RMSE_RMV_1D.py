@@ -12,7 +12,7 @@ xx, yy = HMM.simulate()
 t_obs = HMM.tseq.tt[HMM.tseq.dko :: HMM.tseq.dko]
 
 N = 55
-infl = 1.04
+#infl = 1.04
 
 def creer_filtres():
     return [
@@ -108,7 +108,7 @@ for i, xp in enumerate(creer_filtres()):
     ), row=5, col=1)
 
 fig.update_layout(
-    title=f"Analyse de l'effondrement : impact des noyaux sur le rang et l'erreur, N = {N} et inflation = {infl}",
+    title=f"Analyse de l'effondrement : impact des noyaux sur le rang et l'erreur, N = {N}",
     height=1500,
     hovermode="x unified",
     template="plotly_white",
