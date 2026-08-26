@@ -1,7 +1,7 @@
 import dapper as dpr
 import pandas as pd
 import numpy as np
-from dapper.mods.NPZ.settings_1D import HMM
+from dapper.mods.NPZ.settings_1D_param import HMM
 from dapper.da_methods import EnKF, KETKF
 import time
 import os
@@ -134,7 +134,7 @@ for k in range(n_simulations):
             temps_ecoule = t1 - t0
             
         except Exception as e:
-            print(f"Le filtre {nom} a divergé : {type(e).__name__}")
+            print(f"  [!] Le filtre {nom} a divergé : {type(e).__name__}")
             val_rmse = np.nan
             val_rmv  = np.nan
             temps_ecoule = np.nan

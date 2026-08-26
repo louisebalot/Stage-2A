@@ -26,6 +26,7 @@ class KETKF(da_method):
     sigma_rbf: float = 1.0   # Pour les noyaux basés sur la distance
     c_tanh: float = 1.0      # Pour le tanh
     reg_tikhonov: float = 1e-15
+    Np: int = 0              # nombre de paramètre à estimer
 
     log_transform: bool = False
     truncated: bool = False
@@ -211,9 +212,11 @@ class KETKF(da_method):
 
             # Passage en log si demandé  ----------------------------------------
             if self.log_transform:
-                W = np.log(E)
+                W = E.copy()
+                W[:, :-self.Np] = np.log(np.maximum(E[:, :-self.Np], 1e-10))
                 mu_f = mean(W, axis=0)
                 X_f = (W - mu_f).T
+                
             else:
                 mu_f = mean(E, axis=0)
                 X_f = (E - mu_f).T
@@ -306,7 +309,9 @@ class KETKF(da_method):
             # si log transform ----------------------------------------------------
             if self.log_transform:
                 # E_ana est dans l'espace log, on le ramène en physique
-                E_analyse = np.exp(np.clip(E_analyse, -50, 50)) 
+                # E_analyse = np.exp(np.clip(E_analyse, -50, 50)) 
+                E_analyse[:, :-self.Np] = np.exp(np.clip(E_analyse[:, :-self.Np], -50, 50))
+
             elif self.truncated:
                 # E_ana est déjà en physique, on tronque juste les négatifs
                 E_analyse = np.maximum(E_analyse, 1e-20)

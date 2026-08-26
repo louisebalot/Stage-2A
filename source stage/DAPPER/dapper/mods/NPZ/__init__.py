@@ -181,3 +181,30 @@ def step_1D(etat_precedent, t, dt, M, dz):
         x_bio_finale[:, 2, -1] = 0.0
             
         return np.maximum(x_bio_finale, 1e-8).reshape(nb_membres, -1)
+
+
+
+############################ Estimation paramètres
+
+Nx = 3 * M
+Np = 1
+
+def step_1D_augmented_log(x_aug, t, dt):
+    
+    global m_P  
+
+    if x_aug.ndim == 1:
+        x_state = x_aug[:Nx]
+        log_m_P = x_aug[-1]
+        m_P = np.exp(log_m_P)
+    else:
+        x_state = x_aug[:, :Nx]
+        log_m_P = x_aug[:, -1]
+        m_P = np.exp(log_m_P) 
+
+    x_state_next = step_1D(x_state, t, dt, M, dz)
+    
+    if x_aug.ndim == 1:
+        return np.concatenate([x_state_next, [log_m_P]])
+    else:
+        return np.hstack([x_state_next, log_m_P[:, None]])
