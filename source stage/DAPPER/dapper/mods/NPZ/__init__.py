@@ -187,24 +187,32 @@ def step_1D(etat_precedent, t, dt, M, dz):
 ############################ Estimation paramètres
 
 Nx = 3 * M
-Np = 1
+Np = 3
 
 def step_1D_augmented_log(x_aug, t, dt):
     
-    global m_P  
+    global m_P, m_Z, beta
 
     if x_aug.ndim == 1:
         x_state = x_aug[:Nx]
-        log_m_P = x_aug[-1]
+        log_m_P, log_m_Z, log_beta = x_aug[-3:]
+        
         m_P = np.exp(log_m_P)
+        m_Z = np.exp(log_m_Z)
+        beta = np.exp(log_beta)
     else:
         x_state = x_aug[:, :Nx]
-        log_m_P = x_aug[:, -1]
-        m_P = np.exp(log_m_P) 
+        log_m_P = x_aug[:, -3]
+        log_m_Z = x_aug[:, -2]
+        log_beta = x_aug[:, -1]
+        
+        m_P = np.exp(log_m_P)
+        m_Z = np.exp(log_m_Z)
+        beta = np.exp(log_beta)
 
     x_state_next = step_1D(x_state, t, dt, M, dz)
     
     if x_aug.ndim == 1:
-        return np.concatenate([x_state_next, [log_m_P]])
+        return np.concatenate([x_state_next, [log_m_P, log_m_Z, log_beta]])
     else:
-        return np.hstack([x_state_next, log_m_P[:, None]])
+        return np.hstack([x_state_next, np.column_stack([log_m_P, log_m_Z, log_beta])])

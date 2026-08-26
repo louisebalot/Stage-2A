@@ -57,20 +57,24 @@ for f in creer_filtres():
         t1 = time.time()
         
         mu_analyse = f.stats.mu.a
-        
-        erreur_etat = mu_analyse[:, :-1] - xx[:, :-1]
+        dko = HMM.tseq.dko
+        xx_obs = xx[dko::dko]
+
+        erreur_etat = mu_analyse[:, :-Np] - xx_obs[:, :-Np]
         val_rmse_s = np.sqrt(np.nanmean(erreur_etat**2))
         
-        m_P_estime = np.exp(mu_analyse[:, -1])
-        m_P_vrai   = np.exp(xx[:, -1])
-        val_rmse_p = np.sqrt(np.nanmean((m_P_estime - m_P_vrai)**2))
+        params_estimes = np.exp(mu_analyse[:, -Np:])
+        params_vrais   = np.exp(xx_obs[:, -Np:])
+        val_rmse_p = np.sqrt(np.nanmean((params_estimes - params_vrais)**2))
         
         val_rmv = np.nanmean(f.stats.spread.rms.a)
         
         temps_ecoule = t1 - t0
         
     except Exception as e:
-        print(f"Le filtre {nom} a divergé : {type(e).__name__}")
+        import traceback
+        print(f"\n[!] Le filtre {nom} a divergé : {type(e).__name__} - {e}")
+        traceback.print_exc() 
         val_rmse_s, val_rmse_p, val_rmv, temps_ecoule = np.nan, np.nan, np.nan, np.nan
 
     rmse_state[nom].append(val_rmse_s)
