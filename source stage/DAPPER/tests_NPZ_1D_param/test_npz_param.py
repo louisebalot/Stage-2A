@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import time
-from dapper.da_methods import EnKF, KETKF
+from dapper.da_methods import EnKF_param, KETKF
 
 from dapper.mods.NPZ.settings_1D_param import HMM, set_X0_and_simulate
 from dapper.mods.NPZ import Np
@@ -17,10 +17,10 @@ def creer_filtres():
         KETKF(N=N, infl=1.001, rot=True, kernel_type='hyperbolique', c_tanh=0.0001, reg_tikhonov=1e-4, log_transform=True, Np=Np),
         KETKF(N=N, infl=1.01, rot=True, kernel_type='linear', reg_tikhonov=1e-3, log_transform=True, Np=Np),
         KETKF(N=N, infl=1.01, rot=True, kernel_type='lap', reg_tikhonov=1e-2, log_transform=True, Np=Np),
-        EnKF('PertObs', N=N, infl=1.001, rot=False, truncated=True),
+        EnKF_param('PertObs', N=N, infl=1.001, rot=False, truncated=True),
         KETKF(N=N, infl=1.01, rot=True, kernel_type='sigmoid', c_tanh=0.001, reg_tikhonov=1e-3, log_transform=True, Np=Np),
-        EnKF('DEnKF', N=N, infl=1.001, rot=True, truncated=True),
-        EnKF('Sqrt', N=N, infl=1.001, rot=True, truncated=True),
+        EnKF_param('DEnKF', N=N, infl=1.001, rot=True, truncated=True),
+        EnKF_param('Sqrt', N=N, infl=1.001, rot=True, truncated=True),
         KETKF(N=N, infl=1.05, rot=True, kernel_type='rbf', sigma_rbf=0.5, reg_tikhonov=1e-3, log_transform=True, Np=Np),
         KETKF(N=N, infl=1.05, rot=True, kernel_type='rbf_exp', sigma_rbf=0.5, reg_tikhonov=1e-4, log_transform=True, Np=Np),
         KETKF(N=N, infl=1.05, rot=True, kernel_type='polynomial', poly_degree=3, reg_tikhonov=1e-3, log_transform=True, Np=Np)

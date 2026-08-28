@@ -161,3 +161,4 @@ from .other import LNETF, RHF
 from .particle import OptPF, PartFilt, PFa, PFxN, PFxN_EnKF
 from .variational import Var4D, iEnKS
 from .ketkf import KETKF
+from .ensemble_param import EnKF_param
