@@ -73,7 +73,7 @@ for f in creer_filtres():
         
     except Exception as e:
         import traceback
-        print(f"\n[!] Le filtre {nom} a divergé : {type(e).__name__} - {e}")
+        print(f"\n Le filtre {nom} a divergé : {type(e).__name__} - {e}")
         traceback.print_exc() 
         val_rmse_s, val_rmse_p, val_rmv, temps_ecoule = np.nan, np.nan, np.nan, np.nan
 
